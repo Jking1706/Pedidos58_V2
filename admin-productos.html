@@ -1,0 +1,907 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sabor +58 - Admin Productos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rojo: #cf1720;
+      --amarillo: #f5c518;
+      --azul: #003087;
+      --negro: #0f0f0f;
+      --crema: #fff8ec;
+      --gris: #f0ece4;
+      --gris2: #d8d2c8;
+      --verde: #2ecc71;
+      --sombra: 0 6px 24px rgba(0, 0, 0, 0.08);
+      --borde: 1px solid rgba(15, 15, 15, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%);
+      color: #1b1b1b;
+      min-height: 100vh;
+    }
+
+    a { color: inherit; text-decoration: none; }
+
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(15, 15, 15, 0.96);
+      color: white;
+      border-bottom: 4px solid var(--amarillo);
+      backdrop-filter: blur(10px);
+    }
+
+    .topbar {
+      max-width: 1360px;
+      margin: 0 auto;
+      min-height: 68px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+
+    .brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.95rem;
+      letter-spacing: 2px;
+      color: var(--amarillo);
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      white-space: nowrap;
+    }
+
+    .brand span { color: var(--rojo); }
+
+    .brand small {
+      color: rgba(255, 255, 255, 0.55);
+      font-size: 0.85rem;
+      letter-spacing: 1px;
+    }
+
+    .top-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      flex-wrap: wrap;
+      justify-content: flex-end;
+    }
+
+    .btn-link,
+    .btn,
+    .btn-danger,
+    .btn-secondary,
+    .btn-mini {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
+
+    .btn-link {
+      background: rgba(255, 255, 255, 0.1);
+      color: white;
+    }
+
+    .btn-link:hover,
+    .btn:hover,
+    .btn-danger:hover,
+    .btn-secondary:hover,
+    .btn-mini:hover { transform: translateY(-1px); }
+
+    .btn { background: var(--azul); color: white; }
+    .btn-secondary { background: #dfe7f7; color: #18346b; }
+    .btn-danger { background: #ffd9dc; color: #8e0f17; }
+    .btn-mini { padding: 7px 10px; border-radius: 10px; font-size: 0.82rem; }
+
+    main {
+      max-width: 1360px;
+      margin: 0 auto;
+      padding: 22px 20px 40px;
+    }
+
+    .hero {
+      display: flex;
+      justify-content: space-between;
+      gap: 18px;
+      align-items: flex-end;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .hero-copy h1 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: clamp(2.1rem, 4vw, 3.5rem);
+      letter-spacing: 1px;
+      color: var(--negro);
+      line-height: 0.95;
+    }
+
+    .hero-copy p {
+      margin-top: 8px;
+      color: rgba(27, 27, 27, 0.72);
+      max-width: 62ch;
+      line-height: 1.5;
+    }
+
+    .summary-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+      margin-bottom: 18px;
+    }
+
+    .summary-card,
+    .panel,
+    .table-panel {
+      background: white;
+      border: var(--borde);
+      border-radius: 18px;
+      box-shadow: var(--sombra);
+    }
+
+    .summary-card {
+      padding: 18px;
+    }
+
+    .summary-label {
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+      font-size: 0.75rem;
+      color: rgba(27, 27, 27, 0.55);
+      font-weight: 800;
+    }
+
+    .summary-value {
+      margin-top: 8px;
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 2rem;
+      letter-spacing: 1px;
+      color: var(--negro);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 360px minmax(0, 1fr);
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel {
+      padding: 18px;
+    }
+
+    .panel-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+    }
+
+    .panel-head h2,
+    .panel-head h3 {
+      font-family: 'Bebas Neue', sans-serif;
+      letter-spacing: 1px;
+      color: var(--negro);
+      font-size: 1.5rem;
+    }
+
+    .muted {
+      color: rgba(27, 27, 27, 0.62);
+      font-size: 0.86rem;
+      line-height: 1.45;
+    }
+
+    .form-grid {
+      display: grid;
+      gap: 12px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field.full { grid-column: 1 / -1; }
+
+    label {
+      font-weight: 800;
+      color: rgba(27, 27, 27, 0.8);
+      font-size: 0.84rem;
+      letter-spacing: 0.2px;
+    }
+
+    input,
+    textarea,
+    select {
+      width: 100%;
+      border: 1px solid rgba(15, 15, 15, 0.12);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+
+    input:focus,
+    textarea:focus,
+    select:focus {
+      border-color: rgba(0, 48, 135, 0.4);
+      box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.08);
+    }
+
+    textarea { resize: vertical; min-height: 92px; }
+
+    .switch-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 0 4px;
+    }
+
+    .switch-row input { width: auto; }
+
+    .form-actions,
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      align-items: center;
+    }
+
+    .form-actions { margin-top: 8px; }
+
+    .notice {
+      margin-top: 10px;
+      min-height: 22px;
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+
+    .notice.ok { color: #15803d; }
+    .notice.error { color: #b91c1c; }
+
+    .table-panel { padding: 0; overflow: hidden; }
+
+    .table-top {
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(15, 15, 15, 0.08);
+    }
+
+    .filters {
+      display: grid;
+      grid-template-columns: minmax(200px, 320px) 170px;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 980px;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 14px 16px;
+      background: #111;
+      color: var(--amarillo);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+
+    tbody tr { border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    tbody tr.inactive { opacity: 0.58; }
+    tbody tr:hover { background: #fffdf4; }
+    td {
+      padding: 14px 16px;
+      vertical-align: top;
+      font-size: 0.88rem;
+      color: rgba(27, 27, 27, 0.92);
+    }
+
+    .order-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 48, 135, 0.08);
+      color: #12306c;
+      font-weight: 800;
+    }
+
+    .name-cell strong {
+      display: block;
+      font-size: 0.98rem;
+      margin-bottom: 4px;
+    }
+
+    .meta-line { color: rgba(27, 27, 27, 0.64); font-size: 0.8rem; line-height: 1.35; }
+
+    .status-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      border-radius: 999px;
+      padding: 5px 10px;
+      font-size: 0.76rem;
+      font-weight: 800;
+    }
+
+    .status-badge.on { background: #e5f7eb; color: #166534; }
+    .status-badge.off { background: #fde8e8; color: #991b1b; }
+
+    .row-actions {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .empty-state {
+      padding: 30px 18px;
+      text-align: center;
+      color: rgba(27, 27, 27, 0.55);
+    }
+
+    .empty-state strong {
+      display: block;
+      color: #111;
+      font-size: 1.1rem;
+      margin-bottom: 8px;
+    }
+
+    .footer-note {
+      margin-top: 14px;
+      color: rgba(27, 27, 27, 0.55);
+      font-size: 0.82rem;
+      line-height: 1.5;
+    }
+
+    .datalist-help {
+      font-size: 0.8rem;
+      color: rgba(27, 27, 27, 0.58);
+      margin-top: -4px;
+    }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 12px 14px; align-items: flex-start; flex-direction: column; }
+      .brand { font-size: 1.65rem; }
+      main { padding: 16px 14px 28px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .panel { padding: 14px; }
+      .table-top { padding: 14px; }
+      .toolbar { width: 100%; }
+      .toolbar .btn-secondary,
+      .toolbar .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">SABOR <span>+58</span> <small>· PRODUCTOS</small></div>
+      <div class="top-actions">
+        <a class="btn-link" href="/admin">Pedidos</a>
+        <a class="btn-link" href="/admin-categorias">Categorías</a>
+        <a class="btn-link" href="/">Menú</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Gestión completa del catálogo</h1>
+        <p>Esta pantalla administra la tabla <strong>productos</strong>. Lo que aparece aquí es lo que consume el menú principal de Pedidos58.</p>
+      </div>
+      <div class="toolbar">
+        <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
+        <button class="btn" id="new-btn" type="button">Nuevo producto</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card"><div class="summary-label">Total</div><div class="summary-value" id="total-count">0</div></article>
+      <article class="summary-card"><div class="summary-label">Activos</div><div class="summary-value" id="active-count">0</div></article>
+      <article class="summary-card"><div class="summary-label">Inactivos</div><div class="summary-value" id="inactive-count">0</div></article>
+      <article class="summary-card"><div class="summary-label">Categorías</div><div class="summary-value" id="category-count">0</div></article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 id="form-title">Nuevo producto</h2>
+            <p class="muted">Crea, edita o desactiva productos sin tocar el frontend.</p>
+          </div>
+        </div>
+
+        <form id="product-form">
+          <div class="form-grid">
+            <div class="field">
+              <label for="nombre">Nombre</label>
+              <input id="nombre" name="nombre" type="text" maxlength="120" required />
+            </div>
+
+            <div class="field full">
+              <label for="descripcion">Descripción</label>
+              <textarea id="descripcion" name="descripcion" maxlength="300" placeholder="Texto visible en el menú"></textarea>
+            </div>
+
+            <div class="field">
+              <label for="categoria_id">Categoría</label>
+              <select id="categoria_id" name="categoria_id" required></select>
+              <div class="datalist-help">Las categorías se administran desde el módulo de categorías.</div>
+            </div>
+
+            <div class="field">
+              <label for="precio">Precio</label>
+              <input id="precio" name="precio" type="number" min="1" step="1" required />
+            </div>
+
+            <div class="field">
+              <label for="orden">Orden</label>
+              <input id="orden" name="orden" type="number" min="1" step="1" placeholder="Auto" />
+            </div>
+
+            <div class="field full">
+              <label for="imagen">Imagen</label>
+              <input id="imagen" name="imagen" type="text" maxlength="255" placeholder="Ruta o URL opcional" />
+            </div>
+
+            <div class="field full">
+              <label class="switch-row" for="activo"><input id="activo" name="activo" type="checkbox" checked /> Activo</label>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn" id="save-btn" type="submit">Guardar producto</button>
+            <button class="btn-secondary" id="reset-btn" type="button">Limpiar</button>
+            <button class="btn-danger" id="delete-edit-btn" type="button" hidden>Eliminar</button>
+          </div>
+
+          <div class="notice" id="form-notice"></div>
+          <div class="footer-note">Nota: el catálogo principal usa solo productos activos y respeta el campo <strong>orden</strong>.</div>
+        </form>
+      </article>
+
+      <article class="table-panel">
+        <div class="table-top">
+          <div>
+            <h3>Productos</h3>
+            <p class="muted">Listado completo, incluyendo inactivos.</p>
+          </div>
+
+          <div class="filters">
+            <input id="search" type="search" placeholder="Buscar por nombre o categoría" />
+            <select id="filter-state">
+              <option value="all">Todos</option>
+              <option value="active">Activos</option>
+              <option value="inactive">Inactivos</option>
+            </select>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Orden</th>
+                <th>Producto</th>
+                <th>Categoría</th>
+                <th>Precio</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="products-body">
+              <tr><td colspan="6"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    function resolveApiBase() {
+      const explicit = String(window.__API_BASE__ || '').trim();
+      if (explicit) {
+        return explicit.replace(/\/$/, '');
+      }
+
+      const origin = String(window.location.origin || '').trim();
+      if (origin && origin !== 'null' && !origin.startsWith('file:')) {
+        return `${origin}/api`;
+      }
+
+      return 'http://localhost:3000/api';
+    }
+
+    const API = resolveApiBase();
+
+    const productForm = document.getElementById('product-form');
+    const saveBtn = document.getElementById('save-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const deleteEditBtn = document.getElementById('delete-edit-btn');
+    const formTitle = document.getElementById('form-title');
+    const formNotice = document.getElementById('form-notice');
+    const productsBody = document.getElementById('products-body');
+    const searchInput = document.getElementById('search');
+    const filterState = document.getElementById('filter-state');
+    const reloadBtn = document.getElementById('reload-btn');
+    const newBtn = document.getElementById('new-btn');
+    const categoriesSelect = document.getElementById('categoria_id');
+
+    const fields = {
+      nombre: document.getElementById('nombre'),
+      descripcion: document.getElementById('descripcion'),
+      categoria_id: document.getElementById('categoria_id'),
+      precio: document.getElementById('precio'),
+      orden: document.getElementById('orden'),
+      imagen: document.getElementById('imagen'),
+      activo: document.getElementById('activo'),
+    };
+
+    const stats = {
+      total: document.getElementById('total-count'),
+      active: document.getElementById('active-count'),
+      inactive: document.getElementById('inactive-count'),
+      categories: document.getElementById('category-count'),
+    };
+
+    let productos = [];
+    let categorias = [];
+    let editingId = null;
+
+    function money(value) {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value) || 0);
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setNotice(message, type = '') {
+      formNotice.textContent = message || '';
+      formNotice.className = `notice ${type}`.trim();
+    }
+
+    function normalizeProduct(product) {
+      return {
+        ...product,
+        id: Number(product.id),
+        categoria_id: product.categoria_id != null ? Number(product.categoria_id) : null,
+        categoria_nombre: product.categoria_nombre || product.categoria || '',
+        categoria_activo: product.categoria_activo !== false,
+        categoria_orden: Number(product.categoria_orden) || 0,
+        precio: Number(product.precio) || 0,
+        orden: Number(product.orden) || 0,
+        activo: Boolean(product.activo),
+        descripcion: product.descripcion || '',
+        imagen: product.imagen || '',
+      };
+    }
+
+    function normalizeCategory(category) {
+      return {
+        ...category,
+        id: Number(category.id),
+        activo: Boolean(category.activo),
+        orden: Number(category.orden) || 0,
+        producto_count: Number(category.producto_count) || 0,
+      };
+    }
+
+    function sortProducts(list) {
+      return [...list].sort((a, b) => {
+        const categoryOrderA = Number(a.categoria_orden) > 0 ? Number(a.categoria_orden) : Number.MAX_SAFE_INTEGER;
+        const categoryOrderB = Number(b.categoria_orden) > 0 ? Number(b.categoria_orden) : Number.MAX_SAFE_INTEGER;
+        const orderA = Number(a.orden) > 0 ? Number(a.orden) : Number.MAX_SAFE_INTEGER;
+        const orderB = Number(b.orden) > 0 ? Number(b.orden) : Number.MAX_SAFE_INTEGER;
+        return categoryOrderA - categoryOrderB || orderA - orderB || a.nombre.localeCompare(b.nombre, 'es') || a.id - b.id;
+      });
+    }
+
+    function renderCategorySelect() {
+      const options = categories
+        .map((category) => `<option value="${category.id}">${esc(category.nombre)}${category.activo ? '' : ' [Inactiva]'}</option>`)
+        .join('');
+
+      categoriesSelect.innerHTML = [
+        '<option value="">Selecciona una categoría</option>',
+        options,
+      ].join('');
+    }
+
+    function updateStats() {
+      const total = productos.length;
+      const active = productos.filter((product) => product.activo).length;
+      const inactive = total - active;
+
+      stats.total.textContent = total;
+      stats.active.textContent = active;
+      stats.inactive.textContent = inactive;
+      stats.categories.textContent = categories.length;
+    }
+
+    function getFilteredProducts() {
+      const query = searchInput.value.trim().toLowerCase();
+      const state = filterState.value;
+
+      return sortProducts(productos.filter((product) => {
+        if (state === 'active' && !product.activo) return false;
+        if (state === 'inactive' && product.activo) return false;
+
+        if (!query) return true;
+        return [product.nombre, product.categoria_nombre, product.descripcion].some((value) => String(value || '').toLowerCase().includes(query));
+      }));
+    }
+
+    function renderProducts() {
+      updateStats();
+
+      const rows = getFilteredProducts();
+
+      if (!rows.length) {
+        productsBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>No hay productos para mostrar</strong>
+                Prueba otra búsqueda o crea un nuevo producto.
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      productsBody.innerHTML = rows.map((product) => `
+        <tr class="${product.activo ? '' : 'inactive'}">
+          <td><span class="order-pill">${product.orden || '—'}</span></td>
+          <td class="name-cell">
+            <strong>${esc(product.nombre)}</strong>
+            <div class="meta-line">${esc(product.descripcion || 'Sin descripción')}</div>
+          </td>
+          <td>
+            <strong>${esc(product.categoria_nombre || 'Sin categoría')}</strong>
+            <div class="meta-line">#${product.categoria_orden || '—'} ${product.categoria_activo ? '' : '· Inactiva'}</div>
+          </td>
+          <td>${money(product.precio)}</td>
+          <td>
+            <span class="status-badge ${product.activo ? 'on' : 'off'}">${product.activo ? 'Activo' : 'Inactivo'}</span>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-mini btn-secondary" type="button" data-action="edit" data-id="${product.id}">Editar</button>
+              <button class="btn-mini ${product.activo ? 'btn-secondary' : 'btn'}" type="button" data-action="toggle" data-id="${product.id}">
+                ${product.activo ? 'Desactivar' : 'Activar'}
+              </button>
+              <button class="btn-mini btn-danger" type="button" data-action="delete" data-id="${product.id}">Eliminar</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    function resetForm() {
+      editingId = null;
+      productForm.reset();
+      fields.activo.checked = true;
+      formTitle.textContent = 'Nuevo producto';
+      saveBtn.textContent = 'Guardar producto';
+      deleteEditBtn.hidden = true;
+      setNotice('');
+    }
+
+    function fillForm(product) {
+      editingId = product.id;
+      fields.nombre.value = product.nombre || '';
+      fields.descripcion.value = product.descripcion || '';
+      fields.categoria_id.value = product.categoria_id ? String(product.categoria_id) : '';
+      fields.precio.value = product.precio || '';
+      fields.orden.value = product.orden || '';
+      fields.imagen.value = product.imagen || '';
+      fields.activo.checked = Boolean(product.activo);
+      formTitle.textContent = `Editar #${product.id}`;
+      saveBtn.textContent = 'Actualizar producto';
+      deleteEditBtn.hidden = false;
+      setNotice(`Editando ${product.nombre}`, 'ok');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function buildPayload() {
+      return {
+        nombre: fields.nombre.value.trim(),
+        descripcion: fields.descripcion.value.trim(),
+        categoria_id: Number(fields.categoria_id.value),
+        precio: Number(fields.precio.value),
+        orden: fields.orden.value.trim() ? Number(fields.orden.value) : undefined,
+        imagen: fields.imagen.value.trim(),
+        activo: fields.activo.checked,
+      };
+    }
+
+    async function apiJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+
+      if (!response.ok) {
+        const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload;
+    }
+
+    async function loadProducts() {
+      setNotice('Cargando productos...', 'ok');
+      try {
+        const data = await apiJson(`${API}/productos?includeInactive=1`, { method: 'GET' });
+        productos = sortProducts(Array.isArray(data) ? data.map(normalizeProduct) : []);
+        renderProducts();
+        setNotice(`Catálogo cargado (${productos.length} productos)`, 'ok');
+      } catch (error) {
+        productsBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>Error al cargar productos</strong>
+                ${esc(error.message)}
+              </div>
+            </td>
+          </tr>`;
+        setNotice(error.message, 'error');
+      }
+    }
+
+    async function loadCategories() {
+      const data = await apiJson(`${API}/categorias?includeInactive=1`, { method: 'GET' });
+      categorias = Array.isArray(data)
+        ? data.map(normalizeCategory).sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0) || a.nombre.localeCompare(b.nombre, 'es'))
+        : [];
+
+      renderCategorySelect();
+      updateStats();
+      return categorias;
+    }
+
+    async function saveProduct(event) {
+      event.preventDefault();
+      setNotice('');
+
+      const payload = buildPayload();
+
+      try {
+        if (!payload.nombre) throw new Error('El nombre es obligatorio');
+        if (!payload.categoria_id || Number.isNaN(payload.categoria_id) || payload.categoria_id <= 0) throw new Error('La categoría es obligatoria');
+        if (!Number.isFinite(payload.precio) || payload.precio <= 0) throw new Error('El precio debe ser mayor a 0');
+
+        const isEdit = Boolean(editingId);
+        const url = isEdit ? `${API}/productos/${editingId}` : `${API}/productos`;
+        const method = isEdit ? 'PUT' : 'POST';
+        await apiJson(url, { method, body: JSON.stringify(payload) });
+
+        await loadProducts();
+        resetForm();
+        setNotice(isEdit ? 'Producto actualizado' : 'Producto creado', 'ok');
+      } catch (error) {
+        setNotice(error.message, 'error');
+      }
+    }
+
+    async function toggleActive(id, activo) {
+      try {
+        await apiJson(`${API}/productos/${id}/activo`, {
+          method: 'PATCH',
+          body: JSON.stringify({ activo: !activo }),
+        });
+
+        await loadProducts();
+        setNotice(!activo ? 'Producto activado' : 'Producto desactivado', 'ok');
+      } catch (error) {
+        setNotice(error.message, 'error');
+      }
+    }
+
+    async function deleteProduct(id) {
+      const product = productos.find((item) => item.id === id);
+      if (!product) return;
+
+      if (!window.confirm(`Eliminar "${product.nombre}" definitivamente?`)) {
+        return;
+      }
+
+      try {
+        await apiJson(`${API}/productos/${id}`, { method: 'DELETE' });
+        if (editingId === id) {
+          resetForm();
+        }
+        await loadProducts();
+        setNotice('Producto eliminado', 'ok');
+      } catch (error) {
+        setNotice(error.message, 'error');
+      }
+    }
+
+    productsBody.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      const id = Number(button.dataset.id);
+      const product = productos.find((item) => item.id === id);
+      if (!product) return;
+
+      const action = button.dataset.action;
+      if (action === 'edit') fillForm(product);
+      if (action === 'toggle') void toggleActive(id, product.activo);
+      if (action === 'delete') void deleteProduct(id);
+    });
+
+    searchInput.addEventListener('input', renderProducts);
+    filterState.addEventListener('change', renderProducts);
+    reloadBtn.addEventListener('click', () => void loadProducts());
+    newBtn.addEventListener('click', resetForm);
+    resetBtn.addEventListener('click', resetForm);
+    deleteEditBtn.addEventListener('click', () => {
+      if (!editingId) return;
+      void deleteProduct(editingId);
+    });
+    productForm.addEventListener('submit', (event) => void saveProduct(event));
+
+    Promise.all([loadCategories(), loadProducts()])
+      .then(() => {
+        renderProducts();
+      })
+      .catch((error) => {
+        setNotice(error.message, 'error');
+      });
+  </script>
+</body>
+</html>

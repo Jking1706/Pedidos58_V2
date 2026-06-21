@@ -109,6 +109,8 @@
 <header>
   <div class="logo">SABOR <span>+58</span> <span style="font-size:1rem;color:#aaa;letter-spacing:1px">· ADMIN</span></div>
   <div class="header-right">
+    <a href="/admin-productos" class="btn-volver">Productos</a>
+    <a href="/admin-categorias" class="btn-volver">Categorías</a>
     <a href="/" class="btn-volver">← Volver a Pedidos</a>
   </div>
 </header>
@@ -190,7 +192,21 @@
 </div>
 
 <script>
-const API = window.location.origin + '/api';
+function resolveApiBase() {
+  const explicit = String(window.__API_BASE__ || '').trim();
+  if (explicit) {
+    return explicit.replace(/\/$/, '');
+  }
+
+  const origin = String(window.location.origin || '').trim();
+  if (origin && origin !== 'null' && !origin.startsWith('file:')) {
+    return `${origin}/api`;
+  }
+
+  return 'http://localhost:3000/api';
+}
+
+const API = resolveApiBase();
 const fmt = n => '$' + parseInt(n).toLocaleString('es-CO');
 
 let pedidosActuales = [];
