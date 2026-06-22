@@ -47,7 +47,14 @@ Probar estas rutas:
 - `GET /api/health`
 - `GET /api/categorias`
 - `GET /api/productos`
+- `GET /api/gastos`
+- `GET /api/dashboard/resumen`
+- `GET /api/dashboard/productos-top`
+- `GET /api/dashboard/ventas-diarias`
+- `GET /api/dashboard/categorias`
 - `GET /admin`
+- `GET /admin-dashboard`
+- `GET /admin-gastos`
 - `GET /admin-productos`
 - `GET /admin-categorias`
 

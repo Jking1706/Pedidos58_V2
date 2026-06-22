@@ -7,6 +7,11 @@ function toInt(value) {
   return Number.isFinite(number) ? Math.trunc(number) : 0;
 }
 
+function toAmount(value) {
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
+}
+
 function normalizeText(value) {
   return String(value ?? '').trim();
 }
@@ -48,6 +53,7 @@ function normalizeProductRow(row) {
     categoria_activo: row.categoria_activo != null ? normalizeBoolean(row.categoria_activo, true) : true,
     categoria_orden: row.categoria_orden != null ? toInt(row.categoria_orden) : 0,
     precio: toInt(row.precio),
+    costo: toAmount(row.costo),
     activo: normalizeBoolean(row.activo, true),
     imagen: row.imagen ?? null,
     orden: toInt(row.orden),
@@ -96,6 +102,17 @@ function buildProductPayload(data, existing = null) {
     throw Object.assign(new Error('El precio debe ser mayor a 0'), { statusCode: 400 });
   }
 
+  const hasCosto = data.costo !== undefined && data.costo !== null && String(data.costo).trim() !== '';
+  const costo = hasCosto ? Number(data.costo) : toAmount(existing?.costo ?? 0);
+
+  if (hasCosto && !Number.isFinite(costo)) {
+    throw Object.assign(new Error('El costo debe ser un número válido'), { statusCode: 400 });
+  }
+
+  if (costo < 0) {
+    throw Object.assign(new Error('El costo no puede ser menor a 0'), { statusCode: 400 });
+  }
+
   const descripcion = data.descripcion !== undefined
     ? normalizeText(data.descripcion)
     : normalizeText(existing?.descripcion);
@@ -121,6 +138,7 @@ function buildProductPayload(data, existing = null) {
     nombre,
     descripcion,
     precio,
+    costo: toAmount(costo),
     activo,
     imagen,
     orden,
@@ -136,8 +154,8 @@ async function getNextProductOrder(categoryId) {
 }
 
 async function listProducts({ includeInactive = false } = {}) {
-  const result = await pool.query(
-    `SELECT p.id,
+    const result = await pool.query(
+      `SELECT p.id,
             p.nombre,
             p.descripcion,
             p.categoria_id,
@@ -145,6 +163,7 @@ async function listProducts({ includeInactive = false } = {}) {
             c.activo AS categoria_activo,
             c.orden AS categoria_orden,
             p.precio,
+            p.costo,
             p.activo,
             p.imagen,
             p.orden,
@@ -160,8 +179,8 @@ async function listProducts({ includeInactive = false } = {}) {
 }
 
 async function getProductById(id) {
-  const result = await pool.query(
-    `SELECT p.id,
+    const result = await pool.query(
+      `SELECT p.id,
             p.nombre,
             p.descripcion,
             p.categoria_id,
@@ -169,6 +188,7 @@ async function getProductById(id) {
             c.activo AS categoria_activo,
             c.orden AS categoria_orden,
             p.precio,
+            p.costo,
             p.activo,
             p.imagen,
             p.orden,
@@ -189,25 +209,27 @@ async function createProduct(data) {
   const orden = payload.orden ?? await getNextProductOrder(category.id);
 
   const result = await pool.query(
-    `INSERT INTO productos (nombre, descripcion, categoria_id, categoria, precio, activo, imagen, orden)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+    `INSERT INTO productos (nombre, descripcion, categoria_id, categoria, precio, costo, activo, imagen, orden)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      RETURNING id,
-               nombre,
-               descripcion,
-               categoria_id,
-               categoria,
-               precio,
-               activo,
-               imagen,
-               orden,
-               created_at,
-               updated_at`,
+                nombre,
+                descripcion,
+                categoria_id,
+                categoria,
+                precio,
+                costo,
+                activo,
+                imagen,
+                orden,
+                created_at,
+                updated_at`,
     [
       payload.nombre,
       payload.descripcion,
       category.id,
       category.nombre,
       payload.precio,
+      payload.costo,
       payload.activo,
       payload.imagen,
       orden,
@@ -234,28 +256,31 @@ async function updateProduct(id, data) {
          categoria_id = $3,
          categoria = $4,
          precio = $5,
-         activo = $6,
-         imagen = $7,
-         orden = $8,
-         updated_at = NOW()
-     WHERE id = $9
-     RETURNING id,
-               nombre,
-               descripcion,
-               categoria_id,
-               categoria,
-               precio,
-               activo,
-               imagen,
-               orden,
-               created_at,
-               updated_at`,
+          costo = $6,
+          activo = $7,
+          imagen = $8,
+          orden = $9,
+          updated_at = NOW()
+      WHERE id = $10
+      RETURNING id,
+                nombre,
+                descripcion,
+                categoria_id,
+                categoria,
+                precio,
+                costo,
+                activo,
+                imagen,
+                orden,
+                created_at,
+                updated_at`,
     [
       payload.nombre,
       payload.descripcion,
       category.id,
       category.nombre,
       payload.precio,
+      payload.costo,
       payload.activo,
       payload.imagen,
       orden,
@@ -273,22 +298,23 @@ async function setProductActive(id, activo) {
   }
 
   const nextActivo = normalizeBoolean(activo, !existing.activo);
-  const result = await pool.query(
-    `UPDATE productos
-     SET activo = $1,
-         updated_at = NOW()
-     WHERE id = $2
-     RETURNING id,
-               nombre,
-               descripcion,
-               categoria_id,
-               categoria,
-               precio,
-               activo,
-               imagen,
-               orden,
-               created_at,
-               updated_at`,
+    const result = await pool.query(
+      `UPDATE productos
+      SET activo = $1,
+          updated_at = NOW()
+      WHERE id = $2
+      RETURNING id,
+                nombre,
+                descripcion,
+                categoria_id,
+                categoria,
+                precio,
+                costo,
+                activo,
+                imagen,
+                orden,
+                created_at,
+                updated_at`,
     [nextActivo, id]
   );
 
@@ -353,6 +379,7 @@ async function seedProductosInicialesIfEmpty() {
         categoria_id: category.id,
         categoria: category.nombre,
         precio: producto.precio,
+        costo: producto.costo ?? 0,
         activo: producto.activo,
         imagen: producto.imagen,
         orden: producto.orden,
@@ -365,18 +392,19 @@ async function seedProductosInicialesIfEmpty() {
       producto.categoria_id,
       producto.categoria,
       producto.precio,
+      producto.costo,
       producto.activo,
       producto.imagen,
       producto.orden,
     ]);
 
     const placeholders = rows.map((_, index) => {
-      const offset = index * 8;
-      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8})`;
+      const offset = index * 9;
+      return `($${offset + 1}, $${offset + 2}, $${offset + 3}, $${offset + 4}, $${offset + 5}, $${offset + 6}, $${offset + 7}, $${offset + 8}, $${offset + 9})`;
     }).join(', ');
 
     await pool.query(
-      `INSERT INTO productos (nombre, descripcion, categoria_id, categoria, precio, activo, imagen, orden)
+      `INSERT INTO productos (nombre, descripcion, categoria_id, categoria, precio, costo, activo, imagen, orden)
        VALUES ${placeholders}`,
       values
     );

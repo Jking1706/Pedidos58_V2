@@ -101,7 +101,8 @@ async function listarPedidosRango(desde = hoy(), hasta = hoy()) {
   const result = await pool.query(
     `SELECT ${PEDIDO_COLUMNS}
      FROM pedidos
-     WHERE to_date(fecha, 'DD/MM/YYYY') BETWEEN to_date($1, 'DD/MM/YYYY') AND to_date($2, 'DD/MM/YYYY')
+     WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
+       AND to_date(fecha, 'DD/MM/YYYY') BETWEEN to_date($1, 'DD/MM/YYYY') AND to_date($2, 'DD/MM/YYYY')
      ORDER BY to_date(fecha, 'DD/MM/YYYY') DESC, id DESC`,
     [desde, hasta]
   );

@@ -416,11 +416,13 @@
   <header>
     <div class="topbar">
       <div class="brand">SABOR <span>+58</span> <small>· PRODUCTOS</small></div>
-      <div class="top-actions">
-        <a class="btn-link" href="/admin">Pedidos</a>
-        <a class="btn-link" href="/admin-categorias">Categorías</a>
-        <a class="btn-link" href="/">Menú</a>
-      </div>
+    <div class="top-actions">
+      <a class="btn-link" href="/admin">Pedidos</a>
+      <a class="btn-link" href="/admin-dashboard">Dashboard</a>
+      <a class="btn-link" href="/admin-gastos">Gastos</a>
+      <a class="btn-link" href="/admin-categorias">Categorías</a>
+      <a class="btn-link" href="/">Menú</a>
+    </div>
     </div>
   </header>
 
@@ -476,6 +478,11 @@
             </div>
 
             <div class="field">
+              <label for="costo">Costo</label>
+              <input id="costo" name="costo" type="number" min="0" step="0.01" value="0" />
+            </div>
+
+            <div class="field">
               <label for="orden">Orden</label>
               <input id="orden" name="orden" type="number" min="1" step="1" placeholder="Auto" />
             </div>
@@ -525,13 +532,14 @@
                 <th>Orden</th>
                 <th>Producto</th>
                 <th>Categoría</th>
+                <th>Costo</th>
                 <th>Precio</th>
                 <th>Estado</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="products-body">
-              <tr><td colspan="6"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+              <tr><td colspan="7"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
             </tbody>
           </table>
         </div>
@@ -574,6 +582,7 @@
       descripcion: document.getElementById('descripcion'),
       categoria_id: document.getElementById('categoria_id'),
       precio: document.getElementById('precio'),
+      costo: document.getElementById('costo'),
       orden: document.getElementById('orden'),
       imagen: document.getElementById('imagen'),
       activo: document.getElementById('activo'),
@@ -591,7 +600,7 @@
     let editingId = null;
 
     function money(value) {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', maximumFractionDigits: 0 }).format(Number(value) || 0);
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
     }
 
     function esc(value) {
@@ -617,6 +626,7 @@
         categoria_activo: product.categoria_activo !== false,
         categoria_orden: Number(product.categoria_orden) || 0,
         precio: Number(product.precio) || 0,
+        costo: Number(product.costo) || 0,
         orden: Number(product.orden) || 0,
         activo: Boolean(product.activo),
         descripcion: product.descripcion || '',
@@ -687,7 +697,7 @@
       if (!rows.length) {
         productsBody.innerHTML = `
           <tr>
-            <td colspan="6">
+            <td colspan="7">
               <div class="empty-state">
                 <strong>No hay productos para mostrar</strong>
                 Prueba otra búsqueda o crea un nuevo producto.
@@ -708,6 +718,7 @@
             <strong>${esc(product.categoria_nombre || 'Sin categoría')}</strong>
             <div class="meta-line">#${product.categoria_orden || '—'} ${product.categoria_activo ? '' : '· Inactiva'}</div>
           </td>
+          <td>${money(product.costo)}</td>
           <td>${money(product.precio)}</td>
           <td>
             <span class="status-badge ${product.activo ? 'on' : 'off'}">${product.activo ? 'Activo' : 'Inactivo'}</span>
@@ -740,6 +751,7 @@
       fields.descripcion.value = product.descripcion || '';
       fields.categoria_id.value = product.categoria_id ? String(product.categoria_id) : '';
       fields.precio.value = product.precio || '';
+      fields.costo.value = product.costo || 0;
       fields.orden.value = product.orden || '';
       fields.imagen.value = product.imagen || '';
       fields.activo.checked = Boolean(product.activo);
@@ -756,6 +768,7 @@
         descripcion: fields.descripcion.value.trim(),
         categoria_id: Number(fields.categoria_id.value),
         precio: Number(fields.precio.value),
+        costo: Number(fields.costo.value),
         orden: fields.orden.value.trim() ? Number(fields.orden.value) : undefined,
         imagen: fields.imagen.value.trim(),
         activo: fields.activo.checked,
@@ -790,7 +803,7 @@
       } catch (error) {
         productsBody.innerHTML = `
           <tr>
-            <td colspan="6">
+            <td colspan="7">
               <div class="empty-state">
                 <strong>Error al cargar productos</strong>
                 ${esc(error.message)}
@@ -822,6 +835,7 @@
         if (!payload.nombre) throw new Error('El nombre es obligatorio');
         if (!payload.categoria_id || Number.isNaN(payload.categoria_id) || payload.categoria_id <= 0) throw new Error('La categoría es obligatoria');
         if (!Number.isFinite(payload.precio) || payload.precio <= 0) throw new Error('El precio debe ser mayor a 0');
+        if (!Number.isFinite(payload.costo) || payload.costo < 0) throw new Error('El costo debe ser mayor o igual a 0');
 
         const isEdit = Boolean(editingId);
         const url = isEdit ? `${API}/productos/${editingId}` : `${API}/productos`;

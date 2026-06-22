@@ -1,0 +1,584 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sabor +58 - Gastos</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rojo: #cf1720;
+      --amarillo: #f5c518;
+      --azul: #003087;
+      --negro: #0f0f0f;
+      --gris: #f0ece4;
+      --gris2: #d8d2c8;
+      --verde: #2ecc71;
+      --sombra: 0 6px 24px rgba(0, 0, 0, 0.08);
+      --borde: 1px solid rgba(15, 15, 15, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%); color: #1b1b1b; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    header { position: sticky; top: 0; z-index: 20; background: rgba(15, 15, 15, 0.96); color: white; border-bottom: 4px solid var(--amarillo); backdrop-filter: blur(10px); }
+    .topbar { max-width: 1360px; margin: 0 auto; min-height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.95rem; letter-spacing: 2px; color: var(--amarillo); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+    .brand span { color: var(--rojo); }
+    .brand small { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; letter-spacing: 1px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn-link, .btn, .btn-secondary, .btn-danger, .btn-mini { border: none; border-radius: 12px; padding: 10px 14px; font-family: inherit; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease; }
+    .btn-link { background: rgba(255, 255, 255, 0.1); color: white; }
+    .btn-link:hover, .btn:hover, .btn-secondary:hover, .btn-danger:hover, .btn-mini:hover { transform: translateY(-1px); }
+    .btn { background: var(--azul); color: white; }
+    .btn-secondary { background: #dfe7f7; color: #18346b; }
+    .btn-danger { background: #ffd9dc; color: #8e0f17; }
+    .btn-mini { padding: 7px 10px; border-radius: 10px; font-size: 0.82rem; }
+    .btn-mini:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+
+    main { max-width: 1360px; margin: 0 auto; padding: 22px 20px 40px; }
+    .hero { display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap; }
+    .hero-copy h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.1rem, 4vw, 3.5rem); letter-spacing: 1px; color: var(--negro); line-height: 0.95; }
+    .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 68ch; line-height: 1.5; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .summary-card, .panel, .table-panel { background: white; border: var(--borde); border-radius: 18px; box-shadow: var(--sombra); }
+    .summary-card { padding: 18px; }
+    .summary-label { text-transform: uppercase; letter-spacing: 0.6px; font-size: 0.75rem; color: rgba(27, 27, 27, 0.55); font-weight: 800; }
+    .summary-value { margin-top: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--negro); line-height: 1; }
+
+    .layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel { padding: 18px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .panel-head h2, .panel-head h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--negro); font-size: 1.5rem; }
+    .muted { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
+
+    .form-grid { display: grid; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-weight: 800; color: rgba(27, 27, 27, 0.8); font-size: 0.84rem; letter-spacing: 0.2px; }
+    input, textarea, select { width: 100%; border: 1px solid rgba(15, 15, 15, 0.12); border-radius: 12px; padding: 11px 12px; font: inherit; background: #fff; color: #111; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: rgba(0, 48, 135, 0.4); box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.08); }
+    textarea { resize: vertical; min-height: 92px; }
+    .form-actions, .toolbar, .filter-actions, .pager { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .form-actions, .pager { margin-top: 8px; }
+    .notice { margin-top: 10px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
+    .notice.ok { color: #15803d; }
+    .notice.error { color: #b91c1c; }
+
+    .table-panel { padding: 0; overflow: hidden; }
+    .table-top { padding: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    .filters { display: grid; grid-template-columns: minmax(180px, 220px) minmax(180px, 220px) minmax(220px, 1fr); gap: 10px; align-items: center; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1080px; }
+    thead th { text-align: left; padding: 14px 16px; background: #111; color: var(--amarillo); font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 1px; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    tbody tr:hover { background: #fffdf4; }
+    td { padding: 14px 16px; vertical-align: top; font-size: 0.88rem; color: rgba(27, 27, 27, 0.92); }
+    .meta-line { color: rgba(27, 27, 27, 0.64); font-size: 0.8rem; line-height: 1.35; }
+    .money { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; color: var(--rojo); letter-spacing: 0.6px; }
+    .meta-line { color: rgba(27, 27, 27, 0.64); font-size: 0.8rem; line-height: 1.35; }
+    .row-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+    .empty-state { padding: 30px 18px; text-align: center; color: rgba(27, 27, 27, 0.55); }
+    .empty-state strong { display: block; color: #111; font-size: 1.1rem; margin-bottom: 8px; }
+
+    .pagination-bar { padding: 14px 18px; border-top: 1px solid rgba(15, 15, 15, 0.08); background: #fafafa; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .pagination-info { font-size: 0.82rem; color: #666; font-weight: 700; }
+
+    .status { margin-top: 12px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
+    .status.ok { color: #15803d; }
+    .status.error { color: #b91c1c; }
+
+    @media (max-width: 1100px) {
+      .layout { grid-template-columns: 1fr; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 12px 14px; align-items: flex-start; flex-direction: column; }
+      .brand { font-size: 1.65rem; }
+      main { padding: 16px 14px 28px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .panel { padding: 14px; }
+      .table-top { padding: 14px; }
+      .toolbar { width: 100%; }
+      .toolbar .btn-secondary, .toolbar .btn { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">SABOR <span>+58</span> <small>· GASTOS</small></div>
+      <div class="top-actions">
+        <a class="btn-link" href="/admin">Pedidos</a>
+        <a class="btn-link" href="/admin-dashboard">Dashboard</a>
+        <a class="btn-link" href="/admin-productos">Productos</a>
+        <a class="btn-link" href="/admin-categorias">Categorías</a>
+        <a class="btn-link" href="/">Menú</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Gestión de gastos</h1>
+        <p>Registro financiero con filtros por fecha y categoría, edición inline y paginación directa sobre PostgreSQL.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
+        <button class="btn" id="new-btn" type="button">Nuevo gasto</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card"><div class="summary-label">Registros</div><div class="summary-value" id="total-count">0</div></article>
+      <article class="summary-card rojo"><div class="summary-label">Total filtrado</div><div class="summary-value" id="total-value">$0</div></article>
+      <article class="summary-card azul"><div class="summary-label">Página</div><div class="summary-value" id="page-count">1</div></article>
+      <article class="summary-card verde"><div class="summary-label">Páginas</div><div class="summary-value" id="pages-count">1</div></article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2 id="form-title">Nuevo gasto</h2>
+            <p class="muted">Crea, edita y elimina gastos puntuales sin salir del panel administrativo.</p>
+          </div>
+        </div>
+
+        <form id="expense-form">
+          <div class="form-grid">
+            <div class="field full">
+              <label for="descripcion">Descripción</label>
+              <input id="descripcion" name="descripcion" type="text" maxlength="160" required />
+            </div>
+
+            <div class="field full">
+              <label for="categoria">Categoría</label>
+              <input id="categoria" name="categoria" type="text" maxlength="80" list="gasto-categories" required />
+              <datalist id="gasto-categories"></datalist>
+            </div>
+
+            <div class="field">
+              <label for="valor">Valor</label>
+              <input id="valor" name="valor" type="number" min="0" step="0.01" required />
+            </div>
+
+            <div class="field">
+              <label for="fecha">Fecha</label>
+              <input id="fecha" name="fecha" type="date" required />
+            </div>
+
+            <div class="field full">
+              <label for="observaciones">Observaciones</label>
+              <textarea id="observaciones" name="observaciones" maxlength="300" placeholder="Opcional"></textarea>
+            </div>
+          </div>
+
+          <div class="form-actions">
+            <button class="btn" id="save-btn" type="submit">Guardar gasto</button>
+            <button class="btn-secondary" id="reset-btn" type="button">Limpiar</button>
+            <button class="btn-danger" id="delete-edit-btn" type="button" hidden>Eliminar</button>
+          </div>
+
+          <div class="notice" id="form-notice"></div>
+        </form>
+      </article>
+
+      <article class="table-panel">
+        <div class="table-top">
+          <div>
+            <h3>Listado de gastos</h3>
+            <p class="muted">Filtra por fecha inicial, fecha final y categoría.</p>
+          </div>
+
+          <div class="filters">
+            <input id="filter-desde" type="date" />
+            <input id="filter-hasta" type="date" />
+            <input id="filter-categoria" type="text" list="gasto-categories" placeholder="Categoría" />
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Categoría</th>
+                <th>Descripción</th>
+                <th>Valor</th>
+                <th>Observaciones</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="expenses-body">
+              <tr><td colspan="6"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="pagination-bar">
+          <span class="pagination-info" id="pagination-info">—</span>
+          <div class="pager">
+            <button class="btn-secondary btn-mini" id="prev-page-btn" type="button">Anterior</button>
+            <button class="btn-secondary btn-mini" id="next-page-btn" type="button">Siguiente</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <div class="status" id="status"></div>
+  </main>
+
+  <script>
+    function resolveApiBase() {
+      const explicit = String(window.__API_BASE__ || '').trim();
+      if (explicit) {
+        return explicit.replace(/\/$/, '');
+      }
+
+      const origin = String(window.location.origin || '').trim();
+      if (origin && origin !== 'null' && !origin.startsWith('file:')) {
+        return `${origin}/api`;
+      }
+
+      return 'http://localhost:3000/api';
+    }
+
+    const API = resolveApiBase();
+    const PAGE_SIZE = 10;
+    const CATEGORIES = ['Insumos', 'Servicios', 'Nómina', 'Mantenimiento', 'Transporte', 'Varios', 'Impuestos', 'Otros'];
+
+    const statusEl = document.getElementById('status');
+    const reloadBtn = document.getElementById('reload-btn');
+    const newBtn = document.getElementById('new-btn');
+    const saveBtn = document.getElementById('save-btn');
+    const resetBtn = document.getElementById('reset-btn');
+    const deleteEditBtn = document.getElementById('delete-edit-btn');
+    const formTitle = document.getElementById('form-title');
+    const formNotice = document.getElementById('form-notice');
+    const expensesBody = document.getElementById('expenses-body');
+    const paginationInfo = document.getElementById('pagination-info');
+    const prevPageBtn = document.getElementById('prev-page-btn');
+    const nextPageBtn = document.getElementById('next-page-btn');
+    const filters = {
+      desde: document.getElementById('filter-desde'),
+      hasta: document.getElementById('filter-hasta'),
+      categoria: document.getElementById('filter-categoria'),
+    };
+    const fields = {
+      descripcion: document.getElementById('descripcion'),
+      categoria: document.getElementById('categoria'),
+      valor: document.getElementById('valor'),
+      fecha: document.getElementById('fecha'),
+      observaciones: document.getElementById('observaciones'),
+    };
+    const stats = {
+      totalCount: document.getElementById('total-count'),
+      totalValue: document.getElementById('total-value'),
+      pageCount: document.getElementById('page-count'),
+      pagesCount: document.getElementById('pages-count'),
+    };
+    const datalist = document.getElementById('gasto-categories');
+
+    let expenses = [];
+    let editingId = null;
+    let currentPage = 1;
+    let pagination = { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
+    let summary = { totalValor: 0, totalRegistros: 0 };
+
+    function setToday(value = new Date()) {
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+    }
+
+    function firstDayOfMonth(value = new Date()) {
+      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(message, type = '') {
+      statusEl.textContent = message || '';
+      statusEl.className = `status ${type}`.trim();
+    }
+
+    function setNotice(message, type = '') {
+      formNotice.textContent = message || '';
+      formNotice.className = `notice ${type}`.trim();
+    }
+
+    function normalizeExpense(expense) {
+      return {
+        ...expense,
+        id: Number(expense.id),
+        valor: Number(expense.valor) || 0,
+        descripcion: expense.descripcion || '',
+        categoria: expense.categoria || '',
+        fecha: expense.fecha || '',
+        observaciones: expense.observaciones || '',
+      };
+    }
+
+    function renderCategoryOptions() {
+      datalist.innerHTML = CATEGORIES.map((category) => `<option value="${esc(category)}"></option>`).join('');
+    }
+
+    function updateSummary() {
+      stats.totalCount.textContent = pagination.total;
+      stats.totalValue.textContent = money(summary.totalValor);
+      stats.pageCount.textContent = pagination.page;
+      stats.pagesCount.textContent = pagination.totalPages;
+      paginationInfo.textContent = `Página ${pagination.page} de ${pagination.totalPages} · ${pagination.total} registros`;
+      prevPageBtn.disabled = pagination.page <= 1;
+      nextPageBtn.disabled = pagination.page >= pagination.totalPages;
+    }
+
+    function renderExpenses() {
+      updateSummary();
+
+      if (!expenses.length) {
+        expensesBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>No hay gastos para mostrar</strong>
+                Ajusta los filtros o crea un nuevo gasto.
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      expensesBody.innerHTML = expenses.map((expense) => `
+        <tr>
+          <td>${formatDate(expense.fecha)}</td>
+          <td><strong>${esc(expense.categoria)}</strong></td>
+          <td>
+            <strong>${esc(expense.descripcion)}</strong>
+          </td>
+          <td class="money">${money(expense.valor)}</td>
+          <td>
+            <div class="meta-line">${esc(expense.observaciones || '—')}</div>
+          </td>
+          <td>
+            <div class="row-actions">
+              <button class="btn-mini btn-secondary" type="button" data-action="edit" data-id="${expense.id}">Editar</button>
+              <button class="btn-mini btn-danger" type="button" data-action="delete" data-id="${expense.id}">Eliminar</button>
+            </div>
+          </td>
+        </tr>`).join('');
+    }
+
+    function resetForm() {
+      editingId = null;
+      document.getElementById('expense-form').reset();
+      fields.fecha.value = setToday();
+      fields.valor.value = '0';
+      formTitle.textContent = 'Nuevo gasto';
+      saveBtn.textContent = 'Guardar gasto';
+      deleteEditBtn.hidden = true;
+      setNotice('');
+    }
+
+    function fillForm(expense) {
+      editingId = expense.id;
+      fields.descripcion.value = expense.descripcion || '';
+      fields.categoria.value = expense.categoria || '';
+      fields.valor.value = expense.valor || 0;
+      fields.fecha.value = expense.fecha || setToday();
+      fields.observaciones.value = expense.observaciones || '';
+      formTitle.textContent = `Editar #${expense.id}`;
+      saveBtn.textContent = 'Actualizar gasto';
+      deleteEditBtn.hidden = false;
+      setNotice(`Editando ${expense.descripcion}`, 'ok');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
+
+    function buildPayload() {
+      return {
+        descripcion: fields.descripcion.value.trim(),
+        categoria: fields.categoria.value.trim(),
+        valor: Number(fields.valor.value),
+        fecha: fields.fecha.value,
+        observaciones: fields.observaciones.value.trim(),
+      };
+    }
+
+    async function apiJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+
+      if (!response.ok) {
+        const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload;
+    }
+
+    async function loadExpenses(page = currentPage) {
+      setStatus('Cargando gastos...', 'ok');
+
+      const params = new URLSearchParams();
+      params.set('page', String(page || 1));
+      params.set('limit', String(PAGE_SIZE));
+
+      const desde = filters.desde.value.trim();
+      const hasta = filters.hasta.value.trim();
+      const categoria = filters.categoria.value.trim();
+
+      if (desde) params.set('desde', desde);
+      if (hasta) params.set('hasta', hasta);
+      if (categoria) params.set('categoria', categoria);
+
+      try {
+        const data = await apiJson(`${API}/gastos?${params.toString()}`, { method: 'GET' });
+        expenses = Array.isArray(data.items) ? data.items.map(normalizeExpense) : [];
+        pagination = data.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
+        summary = data.summary || { totalValor: 0, totalRegistros: 0 };
+        currentPage = pagination.page || 1;
+        renderExpenses();
+        setStatus(`Gastos cargados (${pagination.total} registros)`, 'ok');
+      } catch (error) {
+        expensesBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>Error al cargar gastos</strong>
+                ${esc(error.message)}
+              </div>
+            </td>
+          </tr>`;
+        setStatus(error.message, 'error');
+      }
+    }
+
+    async function saveExpense(event) {
+      event.preventDefault();
+      setNotice('');
+
+      const payload = buildPayload();
+
+      try {
+        if (!payload.descripcion) throw new Error('La descripción es obligatoria');
+        if (!payload.categoria) throw new Error('La categoría es obligatoria');
+        if (!Number.isFinite(payload.valor) || payload.valor <= 0) throw new Error('El valor debe ser mayor a 0');
+        if (!payload.fecha) throw new Error('La fecha es obligatoria');
+
+        const isEdit = Boolean(editingId);
+        const url = isEdit ? `${API}/gastos/${editingId}` : `${API}/gastos`;
+        const method = isEdit ? 'PUT' : 'POST';
+
+        await apiJson(url, { method, body: JSON.stringify(payload) });
+        await loadExpenses(1);
+        resetForm();
+        setNotice(isEdit ? 'Gasto actualizado' : 'Gasto creado', 'ok');
+      } catch (error) {
+        setNotice(error.message, 'error');
+      }
+    }
+
+    async function deleteExpense(id) {
+      const expense = expenses.find((item) => item.id === id);
+      if (!expense) return;
+
+      if (!window.confirm(`Eliminar "${expense.descripcion}" definitivamente?`)) {
+        return;
+      }
+
+      try {
+        await apiJson(`${API}/gastos/${id}`, { method: 'DELETE' });
+        if (editingId === id) {
+          resetForm();
+        }
+        await loadExpenses(currentPage);
+        setNotice('Gasto eliminado', 'ok');
+      } catch (error) {
+        setNotice(error.message, 'error');
+      }
+    }
+
+    expensesBody.addEventListener('click', (event) => {
+      const button = event.target.closest('button[data-action]');
+      if (!button) return;
+
+      const id = Number(button.dataset.id);
+      const expense = expenses.find((item) => item.id === id);
+      if (!expense) return;
+
+      const action = button.dataset.action;
+      if (action === 'edit') fillForm(expense);
+      if (action === 'delete') void deleteExpense(id);
+    });
+
+    function setDefaultFilters() {
+      const now = new Date();
+      filters.desde.value = firstDayOfMonth(now);
+      filters.hasta.value = setToday(now);
+      filters.categoria.value = '';
+    }
+
+    function applyFilters() {
+      currentPage = 1;
+      void loadExpenses(1);
+    }
+
+    reloadBtn.addEventListener('click', () => void loadExpenses(currentPage));
+    newBtn.addEventListener('click', resetForm);
+    resetBtn.addEventListener('click', resetForm);
+    deleteEditBtn.addEventListener('click', () => {
+      if (!editingId) return;
+      void deleteExpense(editingId);
+    });
+    document.getElementById('expense-form').addEventListener('submit', (event) => void saveExpense(event));
+    filters.desde.addEventListener('change', applyFilters);
+    filters.hasta.addEventListener('change', applyFilters);
+    filters.categoria.addEventListener('change', applyFilters);
+    prevPageBtn.addEventListener('click', () => {
+      if (currentPage <= 1) return;
+      currentPage -= 1;
+      void loadExpenses(currentPage);
+    });
+    nextPageBtn.addEventListener('click', () => {
+      if (currentPage >= pagination.totalPages) return;
+      currentPage += 1;
+      void loadExpenses(currentPage);
+    });
+
+    renderCategoryOptions();
+    setDefaultFilters();
+    resetForm();
+    void loadExpenses(1);
+  </script>
+</body>
+</html>

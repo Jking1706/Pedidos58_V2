@@ -54,6 +54,16 @@ async function startServer() {
       return;
     }
 
+    if (method === 'GET' && (pathname === '/admin-dashboard' || pathname === '/admin-dashboard.html')) {
+      serveFile(res, path.resolve(__dirname, '../admin-dashboard.html'), 'text/html; charset=utf-8');
+      return;
+    }
+
+    if (method === 'GET' && (pathname === '/admin-gastos' || pathname === '/admin-gastos.html')) {
+      serveFile(res, path.resolve(__dirname, '../admin-gastos.html'), 'text/html; charset=utf-8');
+      return;
+    }
+
     if (pathname.startsWith('/api/')) {
       const body = method === 'POST' || method === 'PUT' || method === 'PATCH' ? await readJsonBody(req) : undefined;
       const result = await handleApiRoute({

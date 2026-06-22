@@ -1,5 +1,7 @@
 const { sendJson, sendText } = require('../utils/http');
 const categoriasController = require('../controllers/categorias.controller');
+const dashboardController = require('../controllers/dashboard.controller');
+const gastosController = require('../controllers/gastos.controller');
 const healthController = require('../controllers/health.controller');
 const pedidosController = require('../controllers/pedidos.controller');
 const productosController = require('../controllers/productos.controller');
@@ -13,6 +15,54 @@ async function handleApiRoute({ method, pathname, query, body, res }) {
 
     if (method === 'GET' && pathname === '/api/productos') {
       return productosController.getProductos(query);
+    }
+
+    if (method === 'GET' && pathname === '/api/gastos') {
+      return gastosController.getGastos(query);
+    }
+
+    if (method === 'GET' && /^\/api\/gastos\/\d+$/.test(pathname)) {
+      const id = Number(pathname.split('/').pop());
+      if (!Number.isInteger(id) || id <= 0) {
+        throw Object.assign(new Error('ID inválido'), { statusCode: 400 });
+      }
+      return gastosController.getGasto(id);
+    }
+
+    if (method === 'POST' && pathname === '/api/gastos') {
+      return gastosController.postGasto(body);
+    }
+
+    if (method === 'PUT' && /^\/api\/gastos\/\d+$/.test(pathname)) {
+      const id = Number(pathname.split('/').pop());
+      if (!Number.isInteger(id) || id <= 0) {
+        throw Object.assign(new Error('ID inválido'), { statusCode: 400 });
+      }
+      return gastosController.putGasto(id, body);
+    }
+
+    if (method === 'DELETE' && /^\/api\/gastos\/\d+$/.test(pathname)) {
+      const id = Number(pathname.split('/').pop());
+      if (!Number.isInteger(id) || id <= 0) {
+        throw Object.assign(new Error('ID inválido'), { statusCode: 400 });
+      }
+      return gastosController.deleteGasto(id);
+    }
+
+    if (method === 'GET' && pathname === '/api/dashboard/resumen') {
+      return dashboardController.getResumenDashboard();
+    }
+
+    if (method === 'GET' && pathname === '/api/dashboard/productos-top') {
+      return dashboardController.getProductosTopDashboard(query);
+    }
+
+    if (method === 'GET' && pathname === '/api/dashboard/ventas-diarias') {
+      return dashboardController.getVentasDiariasDashboard(query);
+    }
+
+    if (method === 'GET' && pathname === '/api/dashboard/categorias') {
+      return dashboardController.getCategoriasDashboardData(query);
     }
 
     if (method === 'GET' && pathname === '/api/categorias') {

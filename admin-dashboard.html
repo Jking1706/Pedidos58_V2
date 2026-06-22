@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sabor +58 - Dashboard</title>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      --rojo: #cf1720;
+      --amarillo: #f5c518;
+      --azul: #003087;
+      --negro: #0f0f0f;
+      --gris: #f0ece4;
+      --gris2: #d8d2c8;
+      --verde: #2ecc71;
+      --sombra: 0 6px 24px rgba(0, 0, 0, 0.08);
+      --borde: 1px solid rgba(15, 15, 15, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%); color: #1b1b1b; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    header { position: sticky; top: 0; z-index: 20; background: rgba(15, 15, 15, 0.96); color: white; border-bottom: 4px solid var(--amarillo); backdrop-filter: blur(10px); }
+    .topbar { max-width: 1360px; margin: 0 auto; min-height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.95rem; letter-spacing: 2px; color: var(--amarillo); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+    .brand span { color: var(--rojo); }
+    .brand small { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; letter-spacing: 1px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn-link, .btn, .btn-secondary { border: none; border-radius: 12px; padding: 10px 14px; font-family: inherit; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease; }
+    .btn-link { background: rgba(255, 255, 255, 0.1); color: white; }
+    .btn-link:hover, .btn:hover, .btn-secondary:hover { transform: translateY(-1px); }
+    .btn { background: var(--azul); color: white; }
+    .btn-secondary { background: #dfe7f7; color: #18346b; }
+
+    main { max-width: 1360px; margin: 0 auto; padding: 22px 20px 40px; }
+    .hero { display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap; }
+    .hero-copy h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 4vw, 3.6rem); letter-spacing: 1px; color: var(--negro); line-height: 0.95; }
+    .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 68ch; line-height: 1.5; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
+    .summary-card, .panel { background: white; border: var(--borde); border-radius: 18px; box-shadow: var(--sombra); }
+    .summary-card { padding: 18px; }
+    .summary-label { text-transform: uppercase; letter-spacing: 0.6px; font-size: 0.75rem; color: rgba(27, 27, 27, 0.55); font-weight: 800; }
+    .summary-value { margin-top: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--negro); line-height: 1; }
+    .summary-card.rojo { border-top: 4px solid var(--rojo); }
+    .summary-card.azul { border-top: 4px solid var(--azul); }
+    .summary-card.verde { border-top: 4px solid var(--verde); }
+    .summary-card.amarillo { border-top: 4px solid var(--amarillo); }
+
+    .meta-strip {
+      margin-bottom: 18px;
+      padding: 12px 16px;
+      border-radius: 16px;
+      background: rgba(0, 48, 135, 0.06);
+      border: 1px solid rgba(0, 48, 135, 0.08);
+      display: flex;
+      gap: 14px;
+      flex-wrap: wrap;
+      align-items: center;
+      justify-content: space-between;
+      color: rgba(27, 27, 27, 0.82);
+      font-size: 0.9rem;
+      font-weight: 700;
+    }
+    .meta-strip strong { color: var(--azul); }
+
+    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .chart-card { padding: 18px; }
+    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .chart-head h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.45rem; letter-spacing: 1px; color: var(--negro); }
+    .chart-head p { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
+    .chart-box { position: relative; height: 340px; }
+    .chart-box.tall { height: 380px; }
+    canvas { width: 100% !important; height: 100% !important; }
+    .span-2 { grid-column: 1 / -1; }
+
+    .status { margin-top: 12px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
+    .status.ok { color: #15803d; }
+    .status.error { color: #b91c1c; }
+
+    @media (max-width: 1200px) {
+      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+
+    @media (max-width: 760px) {
+      .topbar { padding: 12px 14px; align-items: flex-start; flex-direction: column; }
+      .brand { font-size: 1.65rem; }
+      main { padding: 16px 14px 28px; }
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .chart-grid { grid-template-columns: 1fr; }
+      .span-2 { grid-column: auto; }
+      .chart-box, .chart-box.tall { height: 300px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">SABOR <span>+58</span> <small>· DASHBOARD</small></div>
+      <div class="top-actions">
+        <a class="btn-link" href="/admin">Pedidos</a>
+        <a class="btn-link" href="/admin-productos">Productos</a>
+        <a class="btn-link" href="/admin-categorias">Categorías</a>
+        <a class="btn-link" href="/admin-gastos">Gastos</a>
+        <a class="btn-link" href="/">Menú</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Dashboard ejecutivo</h1>
+        <p>Resumen financiero y analítico en tiempo real desde PostgreSQL. Ventas, egresos, rentabilidad y comportamiento del catálogo.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card rojo"><div class="summary-label">Ventas hoy</div><div class="summary-value" id="ventas-hoy">—</div></article>
+      <article class="summary-card azul"><div class="summary-label">Ventas mes</div><div class="summary-value" id="ventas-mes">—</div></article>
+      <article class="summary-card verde"><div class="summary-label">Gastos mes</div><div class="summary-value" id="gastos-mes">—</div></article>
+      <article class="summary-card amarillo"><div class="summary-label">Utilidad mes</div><div class="summary-value" id="utilidad-mes">—</div></article>
+      <article class="summary-card"><div class="summary-label">Pedidos hoy</div><div class="summary-value" id="pedidos-hoy">—</div></article>
+      <article class="summary-card"><div class="summary-label">Ticket promedio</div><div class="summary-value" id="ticket-promedio">—</div></article>
+    </section>
+
+    <div class="meta-strip" id="meta-strip">
+      <span>Ventas semana: <strong id="ventas-semana">—</strong></span>
+      <span>Gastos hoy: <strong id="gastos-hoy">—</strong></span>
+      <span>Pedidos mes: <strong id="pedidos-mes">—</strong></span>
+    </div>
+
+    <div class="status" id="status"></div>
+
+    <section class="chart-grid">
+      <article class="panel chart-card span-2">
+        <div class="chart-head">
+          <div>
+            <h2>Ventas por día</h2>
+            <p>Serie temporal del período actual.</p>
+          </div>
+        </div>
+        <div class="chart-box tall"><canvas id="ventas-diarias-chart"></canvas></div>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Top productos vendidos</h2>
+            <p>Ordenados por cantidad vendida.</p>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="top-productos-chart"></canvas></div>
+      </article>
+
+      <article class="panel chart-card">
+        <div class="chart-head">
+          <div>
+            <h2>Ventas por categoría</h2>
+            <p>Distribución de ingresos por categoría.</p>
+          </div>
+        </div>
+        <div class="chart-box"><canvas id="categorias-chart"></canvas></div>
+      </article>
+    </section>
+  </main>
+
+  <script>
+    function resolveApiBase() {
+      const explicit = String(window.__API_BASE__ || '').trim();
+      if (explicit) {
+        return explicit.replace(/\/$/, '');
+      }
+
+      const origin = String(window.location.origin || '').trim();
+      if (origin && origin !== 'null' && !origin.startsWith('file:')) {
+        return `${origin}/api`;
+      }
+
+      return 'http://localhost:3000/api';
+    }
+
+    const API = resolveApiBase();
+    const fmtMoney = (value) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+    const fmtCount = (value) => new Intl.NumberFormat('es-CO').format(Number(value) || 0);
+
+    const statusEl = document.getElementById('status');
+    const reloadBtn = document.getElementById('reload-btn');
+    const cards = {
+      ventasHoy: document.getElementById('ventas-hoy'),
+      ventasMes: document.getElementById('ventas-mes'),
+      gastosMes: document.getElementById('gastos-mes'),
+      utilidadMes: document.getElementById('utilidad-mes'),
+      pedidosHoy: document.getElementById('pedidos-hoy'),
+      ticketPromedio: document.getElementById('ticket-promedio'),
+      ventasSemana: document.getElementById('ventas-semana'),
+      gastosHoy: document.getElementById('gastos-hoy'),
+      pedidosMes: document.getElementById('pedidos-mes'),
+    };
+
+    let charts = {
+      ventasDiarias: null,
+      topProductos: null,
+      categorias: null,
+    };
+
+    function setStatus(message, type = '') {
+      statusEl.textContent = message || '';
+      statusEl.className = `status ${type}`.trim();
+    }
+
+    async function apiJson(url) {
+      const response = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
+      const text = await response.text();
+
+      let payload = null;
+      try {
+        payload = text ? JSON.parse(text) : null;
+      } catch {
+        payload = text;
+      }
+
+      if (!response.ok) {
+        const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload;
+    }
+
+    function destroyCharts() {
+      Object.values(charts).forEach((chart) => {
+        if (chart) chart.destroy();
+      });
+      charts = { ventasDiarias: null, topProductos: null, categorias: null };
+    }
+
+    function formatDailyLabel(value) {
+      if (!value) return '';
+      const date = new Date(`${value}T00:00:00`);
+      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit' }).format(date);
+    }
+
+    function renderCards(data) {
+      cards.ventasHoy.textContent = fmtMoney(data.ventas_hoy);
+      cards.ventasMes.textContent = fmtMoney(data.ventas_mes);
+      cards.gastosMes.textContent = fmtMoney(data.gastos_mes);
+      cards.utilidadMes.textContent = fmtMoney(data.utilidad_estimada);
+      cards.pedidosHoy.textContent = fmtCount(data.pedidos_hoy);
+      cards.ticketPromedio.textContent = fmtMoney(data.ticket_promedio);
+      cards.ventasSemana.textContent = fmtMoney(data.ventas_semana);
+      cards.gastosHoy.textContent = fmtMoney(data.gastos_hoy);
+      cards.pedidosMes.textContent = fmtCount(data.pedidos_mes);
+    }
+
+    function renderCharts(ventasDiarias, topProductos, categorias) {
+      destroyCharts();
+
+      const ventasCtx = document.getElementById('ventas-diarias-chart');
+      const topCtx = document.getElementById('top-productos-chart');
+      const catCtx = document.getElementById('categorias-chart');
+
+      charts.ventasDiarias = new Chart(ventasCtx, {
+        type: 'line',
+        data: {
+          labels: ventasDiarias.map((item) => formatDailyLabel(item.fecha)),
+          datasets: [{
+            label: 'Ingresos',
+            data: ventasDiarias.map((item) => Number(item.ingresos) || 0),
+            borderColor: '#003087',
+            backgroundColor: 'rgba(0, 48, 135, 0.14)',
+            pointBackgroundColor: '#cf1720',
+            pointBorderColor: '#cf1720',
+            tension: 0.32,
+            fill: true,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: (context) => fmtMoney(context.parsed.y),
+              },
+            },
+          },
+          scales: {
+            y: {
+              beginAtZero: true,
+              ticks: { callback: (value) => fmtMoney(value) },
+              grid: { color: 'rgba(15,15,15,0.06)' },
+            },
+            x: { grid: { display: false } },
+          },
+        },
+      });
+
+      charts.topProductos = new Chart(topCtx, {
+        type: 'bar',
+        data: {
+          labels: topProductos.map((item) => item.producto),
+          datasets: [{
+            label: 'Cantidad vendida',
+            data: topProductos.map((item) => Number(item.cantidad_vendida) || 0),
+            backgroundColor: '#f5c518',
+            borderRadius: 8,
+          }],
+        },
+        options: {
+          indexAxis: 'y',
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                afterLabel: (context) => {
+                  const item = topProductos[context.dataIndex];
+                  return [`Ingresos: ${fmtMoney(item?.ingresos || 0)}`, `Utilidad: ${fmtMoney(item?.utilidad || 0)}`];
+                },
+              },
+            },
+          },
+          scales: {
+            x: { beginAtZero: true, grid: { color: 'rgba(15,15,15,0.06)' } },
+            y: { grid: { display: false } },
+          },
+        },
+      });
+
+      charts.categorias = new Chart(catCtx, {
+        type: 'doughnut',
+        data: {
+          labels: categorias.map((item) => item.categoria),
+          datasets: [{
+            data: categorias.map((item) => Number(item.ingresos) || 0),
+            backgroundColor: ['#003087', '#cf1720', '#f5c518', '#2ecc71', '#8b5cf6', '#fb923c', '#14b8a6'],
+            borderWidth: 0,
+          }],
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { usePointStyle: true, boxWidth: 10 },
+            },
+            tooltip: {
+              callbacks: {
+                label: (context) => `${context.label}: ${fmtMoney(context.parsed)}`,
+              },
+            },
+          },
+        },
+      });
+    }
+
+    async function loadDashboard() {
+      setStatus('Cargando dashboard...', 'ok');
+
+      try {
+        const [resumen, ventasDiarias, topProductos, categorias] = await Promise.all([
+          apiJson(`${API}/dashboard/resumen`),
+          apiJson(`${API}/dashboard/ventas-diarias`),
+          apiJson(`${API}/dashboard/productos-top`),
+          apiJson(`${API}/dashboard/categorias`),
+        ]);
+
+        renderCards(resumen);
+        renderCharts(ventasDiarias, topProductos, categorias);
+        setStatus('Dashboard actualizado', 'ok');
+      } catch (error) {
+        destroyCharts();
+        setStatus(error.message, 'error');
+      }
+    }
+
+    reloadBtn.addEventListener('click', () => void loadDashboard());
+    void loadDashboard();
+  </script>
+</body>
+</html>
