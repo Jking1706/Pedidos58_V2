@@ -596,7 +596,7 @@
     };
 
     let productos = [];
-    let categorias = [];
+    let categories = [];
     let editingId = null;
 
     function money(value) {
@@ -816,13 +816,13 @@
 
     async function loadCategories() {
       const data = await apiJson(`${API}/categorias?includeInactive=1`, { method: 'GET' });
-      categorias = Array.isArray(data)
+      categories = Array.isArray(data)
         ? data.map(normalizeCategory).sort((a, b) => (Number(a.orden) || 0) - (Number(b.orden) || 0) || a.nombre.localeCompare(b.nombre, 'es'))
         : [];
 
       renderCategorySelect();
       updateStats();
-      return categorias;
+      return categories;
     }
 
     async function saveProduct(event) {
