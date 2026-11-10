@@ -155,7 +155,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
     }
 
     if (method === 'GET' && ['/api-client.js', '/pos-core.js', '/pos-gastos.js', '/pos-pedidos.js', '/pos-ui.js'].includes(pathname)) {
-      serveFile(res, path.resolve(__dirname, '..', pathname), 'application/javascript; charset=utf-8');
+      serveFile(res, path.join(__dirname, '..', pathname), 'application/javascript; charset=utf-8');
       return;
     }
     if (pathname.startsWith('/api/')) {

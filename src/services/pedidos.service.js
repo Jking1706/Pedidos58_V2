@@ -114,8 +114,10 @@ async function listarPedidosRango(desde = hoy(), hasta = hoy()) {
     `SELECT ${PEDIDO_COLUMNS}
      FROM pedidos
      WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-       AND to_date(fecha, 'DD/MM/YYYY') BETWEEN to_date($1, 'DD/MM/YYYY') AND to_date($2, 'DD/MM/YYYY')
-     ORDER BY to_date(fecha, 'DD/MM/YYYY') DESC, id DESC`,
+       AND (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1))
+           BETWEEN (split_part($1, '/', 3) || '-' || split_part($1, '/', 2) || '-' || split_part($1, '/', 1))
+               AND (split_part($2, '/', 3) || '-' || split_part($2, '/', 2) || '-' || split_part($2, '/', 1))
+     ORDER BY (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1)) DESC, id DESC`,
     [desde, hasta]
   );
 

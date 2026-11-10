@@ -24,7 +24,8 @@ async function getOrderMetrics(desde, hasta) {
        SELECT id, total, items
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
+         AND (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1))
+              BETWEEN to_char($1::date, 'YYYY-MM-DD') AND to_char($2::date, 'YYYY-MM-DD')
      ),
      pedido_detalle AS (
        SELECT pf.id,
@@ -73,7 +74,8 @@ async function getProductPerformance(desde, hasta) {
        SELECT items
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
+         AND (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1))
+              BETWEEN to_char($1::date, 'YYYY-MM-DD') AND to_char($2::date, 'YYYY-MM-DD')
      )
      SELECT COALESCE(pr.id::text, NULLIF(item->>'nombre', ''), NULLIF(item->>'id', ''), 'Sin nombre') AS producto_key,
             COALESCE(pr.nombre, item->>'nombre', item->>'id', 'Sin nombre') AS producto,
@@ -262,7 +264,8 @@ async function getVentasDiarias(query = null) {
        SELECT to_date(fecha, 'DD/MM/YYYY')::date AS fecha_dt, total
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
+         AND (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1))
+              BETWEEN to_char($1::date, 'YYYY-MM-DD') AND to_char($2::date, 'YYYY-MM-DD')
      )
      SELECT serie.fecha,
             COALESCE(SUM(pedidos_filtrados.total), 0)::numeric AS ingresos,
@@ -288,7 +291,8 @@ async function getCategoriasDashboard(query = null) {
        SELECT items
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
+         AND (split_part(fecha, '/', 3) || '-' || split_part(fecha, '/', 2) || '-' || split_part(fecha, '/', 1))
+              BETWEEN to_char($1::date, 'YYYY-MM-DD') AND to_char($2::date, 'YYYY-MM-DD')
      )
      SELECT COALESCE(c.nombre, 'Sin categoría') AS categoria,
             COALESCE(SUM(${SAFE_ITEM_PRICE_SQL} * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS ingresos

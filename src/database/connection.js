@@ -11,7 +11,9 @@ const databaseUrl = process.env.DATABASE_URL?.trim() || '';
 
 function isPlaceholderDatabaseUrl(value) {
   if (!value) return true;
-  return /USUARIO|PASSWORD|HOST|YOUR_/i.test(value);
+  // Marca de plantilla solo cuando el token aparece precedido por un delimitador
+  // (p.ej. "//USUARIO:PASSWORD@HOST/..."); evita falsos positivos como "localhost".
+  return /(^|[/@:_=?&-])(USUARIO|PASSWORD|HOST|YOUR_[A-Z0-9_]+)/i.test(value);
 }
 
 function resolveSslConfig(value) {
