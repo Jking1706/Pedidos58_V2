@@ -10,6 +10,7 @@ async function proxyGoogleSheets(method, search = '', body = undefined) {
 
   try {
     const upstream = await fetch(`${webAppUrl}${search}`, {
+      signal: AbortSignal.timeout(15000),
       method,
       headers: body ? { 'Content-Type': 'application/json' } : undefined,
       body: body ? JSON.stringify(body) : undefined,
@@ -27,15 +28,15 @@ async function proxyGoogleSheets(method, search = '', body = undefined) {
     return {
       statusCode: upstream.ok ? 200 : 502,
       payload: {
-        ok: upstream.ok && data.ok !== false,
-        upstreamStatus: upstream.status,
         ...data,
+        ok: upstream.ok && data.ok === true,
+        upstreamStatus: upstream.status,
       },
     };
   } catch (error) {
     return {
       statusCode: 502,
-      payload: { ok: false, error: error.message },
+      payload: { ok: false, error: 'No se pudo contactar con Google Sheets' },
     };
   }
 }

@@ -184,3 +184,79 @@ CREATE INDEX IF NOT EXISTS idx_gastos_fecha
 
 CREATE INDEX IF NOT EXISTS idx_gastos_categoria_fecha
   ON gastos (categoria, fecha DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS cajas (
+  id SERIAL PRIMARY KEY,
+  fecha DATE NOT NULL,
+  monto_inicial NUMERIC(12,2) NOT NULL DEFAULT 0,
+  ventas NUMERIC(12,2) NOT NULL DEFAULT 0,
+  gastos NUMERIC(12,2) NOT NULL DEFAULT 0,
+  monto_final NUMERIC(12,2) NOT NULL DEFAULT 0,
+  estado TEXT NOT NULL DEFAULT 'abierta',
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS fecha DATE NOT NULL DEFAULT CURRENT_DATE;
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS monto_inicial NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS ventas NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS gastos NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS monto_final NUMERIC(12,2) NOT NULL DEFAULT 0;
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS estado TEXT NOT NULL DEFAULT 'abierta';
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS created_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+ALTER TABLE IF EXISTS cajas
+  ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW();
+
+CREATE UNIQUE INDEX IF NOT EXISTS idx_cajas_fecha_unique
+  ON cajas (fecha);
+
+CREATE INDEX IF NOT EXISTS idx_cajas_estado_fecha
+  ON cajas (estado, fecha DESC, id DESC);
+
+CREATE TABLE IF NOT EXISTS empleados (
+  id SERIAL PRIMARY KEY,
+  username TEXT NOT NULL UNIQUE,
+  password_hash TEXT NOT NULL,
+  role TEXT NOT NULL CHECK (role IN ('admin', 'caja', 'consulta')),
+  active BOOLEAN NOT NULL DEFAULT TRUE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS empleado_sesiones (
+  token_hash TEXT PRIMARY KEY,
+  empleado_id INTEGER NOT NULL REFERENCES empleados(id) ON DELETE CASCADE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_empleado_sesiones_expiry ON empleado_sesiones (expires_at);
+CREATE INDEX IF NOT EXISTS idx_empleado_sesiones_user ON empleado_sesiones (empleado_id);
+
+CREATE TABLE IF NOT EXISTS auth_login_limits (
+  key TEXT PRIMARY KEY,
+  attempts INTEGER NOT NULL,
+  expires_at TIMESTAMPTZ NOT NULL
+);
+
+CREATE TABLE IF NOT EXISTS gasto_operaciones (
+  id UUID PRIMARY KEY,
+  payload_hash TEXT NOT NULL,
+  gasto_ids INTEGER[] NOT NULL,
+  sheets_payload JSONB NOT NULL,
+  sheets_status TEXT NOT NULL CHECK (sheets_status IN ('pendiente', 'enviado', 'revisar')),
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);

@@ -4,7 +4,7 @@ const { databaseUrl, isPlaceholderDatabaseUrl, pool } = require('../database/con
 const { seedCategoriasInicialesIfEmpty } = require('./categorias.service');
 const { seedProductosInicialesIfEmpty, syncProductCategoryLinks } = require('./productos.service');
 
-const REQUIRED_TABLES = ['categorias', 'productos', 'pedidos', 'gastos', 'configuracion'];
+const REQUIRED_TABLES = ['categorias', 'productos', 'pedidos', 'gastos', 'cajas', 'configuracion', 'empleados', 'empleado_sesiones', 'auth_login_limits', 'gasto_operaciones'];
 
 async function runSchemaStatements(schemaSql) {
   const statements = schemaSql

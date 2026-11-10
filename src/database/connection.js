@@ -1,6 +1,9 @@
 const path = require('path');
 const dotenv = require('dotenv');
-const { Pool } = require('pg');
+const { Pool, types } = require('pg');
+
+// PostgreSQL DATE es una fecha civil, no un instante: evitar conversiones de zona horaria.
+types.setTypeParser(1082, (value) => value);
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
@@ -49,6 +52,8 @@ const pool = new Pool({
   connectionString: !isPlaceholderDatabaseUrl(databaseUrl) ? normalizeDatabaseUrl(databaseUrl) : undefined,
   ssl: !isPlaceholderDatabaseUrl(databaseUrl) ? resolveSslConfig(databaseUrl) : false,
   connectionTimeoutMillis: 10000,
+  statement_timeout: 20000,
+  idle_in_transaction_session_timeout: 30000,
 });
 
 module.exports = {

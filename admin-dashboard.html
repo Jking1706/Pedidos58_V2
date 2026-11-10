@@ -5,7 +5,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sabor +58 - Dashboard</title>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
-  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+  <script src="/report-tools.js"></script>
   <style>
     :root {
       --rojo: #cf1720;
@@ -13,48 +13,233 @@
       --azul: #003087;
       --negro: #0f0f0f;
       --gris: #f0ece4;
-      --gris2: #d8d2c8;
       --verde: #2ecc71;
       --sombra: 0 6px 24px rgba(0, 0, 0, 0.08);
       --borde: 1px solid rgba(15, 15, 15, 0.08);
     }
 
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body { font-family: 'Nunito', sans-serif; background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%); color: #1b1b1b; min-height: 100vh; }
+    body {
+      font-family: 'Nunito', sans-serif;
+      background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%);
+      color: #1b1b1b;
+      min-height: 100vh;
+    }
     a { color: inherit; text-decoration: none; }
 
-    header { position: sticky; top: 0; z-index: 20; background: rgba(15, 15, 15, 0.96); color: white; border-bottom: 4px solid var(--amarillo); backdrop-filter: blur(10px); }
-    .topbar { max-width: 1360px; margin: 0 auto; min-height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
-    .brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.95rem; letter-spacing: 2px; color: var(--amarillo); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 20;
+      background: rgba(15, 15, 15, 0.96);
+      color: white;
+      border-bottom: 4px solid var(--amarillo);
+      backdrop-filter: blur(10px);
+    }
+    .topbar {
+      max-width: 1360px;
+      margin: 0 auto;
+      min-height: 68px;
+      padding: 0 20px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+    }
+    .brand {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.95rem;
+      letter-spacing: 2px;
+      color: var(--amarillo);
+      display: flex;
+      align-items: baseline;
+      gap: 10px;
+      white-space: nowrap;
+    }
     .brand span { color: var(--rojo); }
     .brand small { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; letter-spacing: 1px; }
     .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
 
-    .btn-link, .btn, .btn-secondary { border: none; border-radius: 12px; padding: 10px 14px; font-family: inherit; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease; }
+    .btn-link, .btn, .btn-secondary, .btn-danger {
+      border: none;
+      border-radius: 12px;
+      padding: 10px 14px;
+      font-family: inherit;
+      font-weight: 800;
+      cursor: pointer;
+      transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease;
+    }
     .btn-link { background: rgba(255, 255, 255, 0.1); color: white; }
-    .btn-link:hover, .btn:hover, .btn-secondary:hover { transform: translateY(-1px); }
+    .btn-link:hover, .btn:hover, .btn-secondary:hover, .btn-danger:hover { transform: translateY(-1px); }
     .btn { background: var(--azul); color: white; }
     .btn-secondary { background: #dfe7f7; color: #18346b; }
+    .btn-danger { background: #ffd9dc; color: #8e0f17; }
+    .btn:disabled, .btn-secondary:disabled, .btn-danger:disabled { opacity: 0.55; cursor: not-allowed; transform: none; }
 
     main { max-width: 1360px; margin: 0 auto; padding: 22px 20px 40px; }
     .hero { display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap; }
     .hero-copy h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 4vw, 3.6rem); letter-spacing: 1px; color: var(--negro); line-height: 0.95; }
-    .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 68ch; line-height: 1.5; }
+    .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 74ch; line-height: 1.5; }
     .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
 
-    .summary-grid { display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 14px; margin-bottom: 14px; }
-    .summary-card, .panel { background: white; border: var(--borde); border-radius: 18px; box-shadow: var(--sombra); }
-    .summary-card { padding: 18px; }
-    .summary-label { text-transform: uppercase; letter-spacing: 0.6px; font-size: 0.75rem; color: rgba(27, 27, 27, 0.55); font-weight: 800; }
-    .summary-value { margin-top: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--negro); line-height: 1; }
-    .summary-card.rojo { border-top: 4px solid var(--rojo); }
-    .summary-card.azul { border-top: 4px solid var(--azul); }
-    .summary-card.verde { border-top: 4px solid var(--verde); }
-    .summary-card.amarillo { border-top: 4px solid var(--amarillo); }
+    .panel, .summary-card, .chart-card, .table-panel {
+      background: white;
+      border: var(--borde);
+      border-radius: 18px;
+      box-shadow: var(--sombra);
+    }
 
-    .meta-strip {
-      margin-bottom: 18px;
-      padding: 12px 16px;
+    .filter-panel { padding: 18px; margin-bottom: 18px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .panel-head h2, .panel-head h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--negro); font-size: 1.5rem; }
+    .muted { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+    .preset-chip {
+      border: 1px solid rgba(0, 48, 135, 0.14);
+      background: #f5f8ff;
+      color: #18346b;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 800;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .preset-chip.active { background: var(--azul); color: white; border-color: var(--azul); }
+
+    .range-row { display: grid; grid-template-columns: minmax(170px, 190px) minmax(170px, 190px) 1fr; gap: 10px; align-items: end; }
+    .field { display: grid; gap: 6px; }
+    .field label { font-weight: 800; color: rgba(27, 27, 27, 0.8); font-size: 0.84rem; }
+    .field input {
+      width: 100%;
+      border: 1px solid rgba(15, 15, 15, 0.12);
+      border-radius: 12px;
+      padding: 11px 12px;
+      font: inherit;
+      background: #fff;
+      color: #111;
+      outline: none;
+    }
+    .field input:focus {
+      border-color: rgba(0, 48, 135, 0.4);
+      box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.08);
+    }
+    .range-actions { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; align-items: center; }
+
+    .range-meta {
+      margin-top: 12px;
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      flex-wrap: wrap;
+      color: rgba(27, 27, 27, 0.66);
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+    .range-meta strong { color: var(--azul); }
+
+    .section { margin-top: 18px; }
+    .section-head {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 12px;
+    }
+    .section-head h2 {
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1.55rem;
+      letter-spacing: 1px;
+      color: var(--negro);
+    }
+
+    .summary-grid { display: grid; gap: 14px; }
+    .summary-grid.period { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .summary-grid.operational { grid-template-columns: repeat(5, minmax(0, 1fr)); }
+    .summary-card { padding: 18px; border-top: 4px solid transparent; }
+    .summary-card.rojo { border-top-color: var(--rojo); }
+    .summary-card.azul { border-top-color: var(--azul); }
+    .summary-card.verde { border-top-color: var(--verde); }
+    .summary-card.amarillo { border-top-color: var(--amarillo); }
+    .summary-card.neutral { border-top-color: #8b8b8b; }
+    .summary-label { text-transform: uppercase; letter-spacing: 0.6px; font-size: 0.75rem; color: rgba(27, 27, 27, 0.55); font-weight: 800; }
+    .summary-value { margin-top: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--negro); line-height: 1; min-height: 34px; }
+    .summary-sub { margin-top: 6px; color: rgba(27, 27, 27, 0.6); font-size: 0.8rem; font-weight: 700; }
+    .summary-card.compact .summary-value { font-size: 1.7rem; }
+    .summary-card.link-card { display: grid; gap: 8px; }
+    .summary-card.link-card .btn-link { width: fit-content; background: var(--azul); }
+
+    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
+    .chart-card { padding: 18px; }
+    .chart-card.span-2 { grid-column: 1 / -1; }
+    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
+    .chart-head h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.45rem; letter-spacing: 1px; color: var(--negro); }
+    .chart-head p { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
+    .chart-box { position: relative; height: 340px; }
+    .chart-box.tall { height: 380px; }
+    canvas { width: 100% !important; height: 100% !important; }
+    .chart-state {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 22px;
+      color: rgba(27, 27, 27, 0.56);
+      font-weight: 700;
+      background: rgba(255, 255, 255, 0.72);
+      border-radius: 14px;
+    }
+    .chart-state[hidden] { display: none; }
+
+    .ranking-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 18px; }
+    .table-panel { padding: 0; overflow: hidden; }
+    .table-top {
+      padding: 18px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+      border-bottom: 1px solid rgba(15, 15, 15, 0.08);
+    }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 980px; }
+    thead th {
+      text-align: left;
+      padding: 14px 16px;
+      background: #111;
+      color: var(--amarillo);
+      font-family: 'Bebas Neue', sans-serif;
+      font-size: 1rem;
+      letter-spacing: 1px;
+      white-space: nowrap;
+    }
+    tbody tr { border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    tbody tr:hover { background: #fffdf4; }
+    td { padding: 14px 16px; vertical-align: top; font-size: 0.88rem; color: rgba(27, 27, 27, 0.92); }
+    .rank-pos {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 34px;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(0, 48, 135, 0.08);
+      color: #12306c;
+      font-weight: 800;
+    }
+    .money { font-family: 'Bebas Neue', sans-serif; font-size: 1.1rem; color: var(--rojo); letter-spacing: 0.6px; }
+    .product-name strong { display: block; font-size: 0.98rem; margin-bottom: 3px; }
+    .product-name .muted { font-size: 0.78rem; }
+    .empty-state { padding: 28px 18px; text-align: center; color: rgba(27, 27, 27, 0.55); }
+    .empty-state strong { display: block; color: #111; font-size: 1.05rem; margin-bottom: 8px; }
+
+    .footer-strip {
+      margin-top: 18px;
+      padding: 14px 16px;
       border-radius: 16px;
       background: rgba(0, 48, 135, 0.06);
       border: 1px solid rgba(0, 48, 135, 0.08);
@@ -67,34 +252,57 @@
       font-size: 0.9rem;
       font-weight: 700;
     }
-    .meta-strip strong { color: var(--azul); }
-
-    .chart-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 18px; }
-    .chart-card { padding: 18px; }
-    .chart-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 14px; flex-wrap: wrap; }
-    .chart-head h2 { font-family: 'Bebas Neue', sans-serif; font-size: 1.45rem; letter-spacing: 1px; color: var(--negro); }
-    .chart-head p { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
-    .chart-box { position: relative; height: 340px; }
-    .chart-box.tall { height: 380px; }
-    canvas { width: 100% !important; height: 100% !important; }
-    .span-2 { grid-column: 1 / -1; }
+    .footer-strip strong { color: var(--azul); }
 
     .status { margin-top: 12px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
     .status.ok { color: #15803d; }
     .status.error { color: #b91c1c; }
 
+    body.loading .summary-value,
+    body.loading .chart-box canvas,
+    body.loading .table-wrap tbody { opacity: 0.2; }
+    body.loading .summary-value {
+      color: transparent;
+      background: linear-gradient(90deg, rgba(218, 218, 218, 0.45) 25%, rgba(245, 245, 245, 0.9) 37%, rgba(218, 218, 218, 0.45) 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+      border-radius: 10px;
+    }
+    body.loading .chart-box::before {
+      content: '';
+      position: absolute;
+      inset: 0;
+      border-radius: 14px;
+      background: linear-gradient(90deg, rgba(218, 218, 218, 0.35) 25%, rgba(245, 245, 245, 0.95) 37%, rgba(218, 218, 218, 0.35) 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+      z-index: 2;
+    }
+    body.loading .chart-state { color: transparent; background: transparent; }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: 0 0; }
+    }
+
     @media (max-width: 1200px) {
-      .summary-grid { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+      .summary-grid.operational { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .ranking-grid { grid-template-columns: 1fr; }
+      .chart-grid { grid-template-columns: 1fr; }
+      .chart-card.span-2 { grid-column: auto; }
     }
 
     @media (max-width: 760px) {
       .topbar { padding: 12px 14px; align-items: flex-start; flex-direction: column; }
       .brand { font-size: 1.65rem; }
       main { padding: 16px 14px 28px; }
-      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .chart-grid { grid-template-columns: 1fr; }
-      .span-2 { grid-column: auto; }
+      .filter-panel { padding: 14px; }
+      .summary-grid.period, .summary-grid.operational { grid-template-columns: 1fr; }
+      .range-row { grid-template-columns: 1fr; }
+      .range-actions { justify-content: stretch; }
+      .range-actions .btn, .range-actions .btn-secondary, .range-actions .btn-danger { flex: 1; }
       .chart-box, .chart-box.tall { height: 300px; }
+      .table-top { padding: 14px; }
     }
   </style>
 </head>
@@ -104,9 +312,10 @@
       <div class="brand">SABOR <span>+58</span> <small>· DASHBOARD</small></div>
       <div class="top-actions">
         <a class="btn-link" href="/admin">Pedidos</a>
+        <a class="btn-link" href="/admin-caja">Caja</a>
+        <a class="btn-link" href="/admin-gastos">Gastos</a>
         <a class="btn-link" href="/admin-productos">Productos</a>
         <a class="btn-link" href="/admin-categorias">Categorías</a>
-        <a class="btn-link" href="/admin-gastos">Gastos</a>
         <a class="btn-link" href="/">Menú</a>
       </div>
     </div>
@@ -116,69 +325,224 @@
     <section class="hero">
       <div class="hero-copy">
         <h1>Dashboard ejecutivo</h1>
-        <p>Resumen financiero y analítico en tiempo real desde PostgreSQL. Ventas, egresos, rentabilidad y comportamiento del catálogo.</p>
+        <p>Control financiero y operativo en tiempo real. Filtra un período, exporta ventas, gastos y productos, y sigue el estado de la caja diaria sin salir del panel.</p>
       </div>
       <div class="hero-actions">
-        <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
+        <button class="btn-secondary" id="refresh-btn" type="button">Actualizar</button>
+        <button class="btn" id="export-ventas-btn" type="button">Exportar Ventas</button>
+        <button class="btn" id="export-gastos-btn" type="button">Exportar Gastos</button>
+        <button class="btn" id="export-productos-btn" type="button">Exportar Productos</button>
+        <button class="btn-secondary" id="export-pdf-btn" type="button">Exportar PDF</button>
       </div>
     </section>
 
-    <section class="summary-grid">
-      <article class="summary-card rojo"><div class="summary-label">Ventas hoy</div><div class="summary-value" id="ventas-hoy">—</div></article>
-      <article class="summary-card azul"><div class="summary-label">Ventas mes</div><div class="summary-value" id="ventas-mes">—</div></article>
-      <article class="summary-card verde"><div class="summary-label">Gastos mes</div><div class="summary-value" id="gastos-mes">—</div></article>
-      <article class="summary-card amarillo"><div class="summary-label">Utilidad mes</div><div class="summary-value" id="utilidad-mes">—</div></article>
-      <article class="summary-card"><div class="summary-label">Pedidos hoy</div><div class="summary-value" id="pedidos-hoy">—</div></article>
-      <article class="summary-card"><div class="summary-label">Ticket promedio</div><div class="summary-value" id="ticket-promedio">—</div></article>
+    <section class="panel filter-panel">
+      <div class="panel-head">
+        <div>
+          <h2>Filtros globales</h2>
+          <p class="muted">Los mismos parámetros se aplican al resumen, ventas diarias, productos, categorías y gastos.</p>
+        </div>
+      </div>
+
+      <div class="preset-row" id="preset-row">
+        <button class="preset-chip" type="button" data-preset="hoy">Hoy</button>
+        <button class="preset-chip" type="button" data-preset="ayer">Ayer</button>
+        <button class="preset-chip active" type="button" data-preset="semana">Esta semana</button>
+        <button class="preset-chip" type="button" data-preset="mes">Este mes</button>
+        <button class="preset-chip" type="button" data-preset="30dias">Últimos 30 días</button>
+        <button class="preset-chip" type="button" data-preset="personalizado">Personalizado</button>
+      </div>
+
+      <div class="range-row">
+        <label class="field">
+          <span>Desde</span>
+          <input id="range-from" type="date" />
+        </label>
+        <label class="field">
+          <span>Hasta</span>
+          <input id="range-to" type="date" />
+        </label>
+        <div class="range-actions">
+          <button class="btn-secondary" id="apply-range-btn" type="button">Aplicar</button>
+          <button class="btn-secondary" id="reset-range-btn" type="button">Este mes</button>
+          <a class="btn-link" href="/admin-caja">Ir a caja</a>
+        </div>
+      </div>
+
+      <div class="range-meta">
+        <span>Periodo activo: <strong id="range-label">—</strong></span>
+        <span>Última actualización: <strong id="updated-at">—</strong></span>
+      </div>
     </section>
 
-    <div class="meta-strip" id="meta-strip">
-      <span>Ventas semana: <strong id="ventas-semana">—</strong></span>
-      <span>Gastos hoy: <strong id="gastos-hoy">—</strong></span>
-      <span>Pedidos mes: <strong id="pedidos-mes">—</strong></span>
-    </div>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Periodo seleccionado</h2>
+          <p class="muted">Métricas calculadas sobre el rango activo.</p>
+        </div>
+      </div>
+      <div class="summary-grid period">
+        <article class="summary-card rojo"><div class="summary-label">Ventas periodo</div><div class="summary-value" id="ventas-rango">—</div><div class="summary-sub">Ingresos totales</div></article>
+        <article class="summary-card verde"><div class="summary-label">Gastos periodo</div><div class="summary-value" id="gastos-rango">—</div><div class="summary-sub">Egresos totales</div></article>
+        <article class="summary-card amarillo"><div class="summary-label">Utilidad periodo</div><div class="summary-value" id="utilidad-rango">—</div><div class="summary-sub">Margen bruto estimado</div></article>
+        <article class="summary-card neutral"><div class="summary-label">Ticket promedio</div><div class="summary-value" id="ticket-promedio-rango">—</div><div class="summary-sub">Ventas / pedidos</div></article>
+        <article class="summary-card neutral"><div class="summary-label">Productos por pedido</div><div class="summary-value" id="productos-promedio-rango">—</div><div class="summary-sub">Cantidad media</div></article>
+        <article class="summary-card neutral"><div class="summary-label">Pedidos por día</div><div class="summary-value" id="pedidos-dia-rango">—</div><div class="summary-sub">Intensidad operativa</div></article>
+      </div>
+    </section>
 
-    <div class="status" id="status"></div>
+    <section class="section">
+      <div class="section-head">
+        <div>
+          <h2>Operación diaria</h2>
+          <p class="muted">Visión rápida de caja, utilidad y gastos del día y del mes.</p>
+        </div>
+      </div>
+      <div class="summary-grid operational">
+        <article class="summary-card link-card azul">
+          <div class="summary-label">Caja actual</div>
+          <div class="summary-value" id="caja-actual">—</div>
+          <div class="summary-sub" id="caja-sub">Cargando caja diaria...</div>
+          <a class="btn-link" href="/admin-caja">Abrir módulo</a>
+        </article>
+        <article class="summary-card azul compact"><div class="summary-label">Utilidad hoy</div><div class="summary-value" id="utilidad-hoy">—</div><div class="summary-sub">Margen bruto del día</div></article>
+        <article class="summary-card amarillo compact"><div class="summary-label">Utilidad mes</div><div class="summary-value" id="utilidad-mes">—</div><div class="summary-sub">Margen bruto del mes</div></article>
+        <article class="summary-card verde compact"><div class="summary-label">Gastos hoy</div><div class="summary-value" id="gastos-hoy">—</div><div class="summary-sub">Egresos del día</div></article>
+        <article class="summary-card rojo compact"><div class="summary-label">Gastos mes</div><div class="summary-value" id="gastos-mes">—</div><div class="summary-sub">Egresos acumulados</div></article>
+      </div>
+    </section>
 
-    <section class="chart-grid">
-      <article class="panel chart-card span-2">
+    <section class="section chart-grid">
+      <article class="chart-card span-2">
         <div class="chart-head">
           <div>
             <h2>Ventas por día</h2>
-            <p>Serie temporal del período actual.</p>
+            <p>Serie temporal del rango filtrado.</p>
           </div>
         </div>
-        <div class="chart-box tall"><canvas id="ventas-diarias-chart"></canvas></div>
+        <div class="chart-box tall">
+          <canvas id="ventas-diarias-chart"></canvas>
+          <div class="chart-state" id="ventas-diarias-state">Cargando ventas diarias...</div>
+        </div>
       </article>
 
-      <article class="panel chart-card">
+      <article class="chart-card">
         <div class="chart-head">
           <div>
             <h2>Top productos vendidos</h2>
             <p>Ordenados por cantidad vendida.</p>
           </div>
         </div>
-        <div class="chart-box"><canvas id="top-productos-chart"></canvas></div>
+        <div class="chart-box">
+          <canvas id="top-productos-chart"></canvas>
+          <div class="chart-state" id="top-productos-state">Cargando ranking...</div>
+        </div>
       </article>
 
-      <article class="panel chart-card">
+      <article class="chart-card">
         <div class="chart-head">
           <div>
             <h2>Ventas por categoría</h2>
-            <p>Distribución de ingresos por categoría.</p>
+            <p>Ingresos agrupados por categoría.</p>
           </div>
         </div>
-        <div class="chart-box"><canvas id="categorias-chart"></canvas></div>
+        <div class="chart-box">
+          <canvas id="categorias-chart"></canvas>
+          <div class="chart-state" id="categorias-state">Cargando categorías...</div>
+        </div>
       </article>
     </section>
+
+    <section class="section ranking-grid">
+      <article class="table-panel">
+        <div class="table-top">
+          <div>
+            <h3>Top 10 vendidos</h3>
+            <p class="muted">Los más vendidos del período.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Ingresos</th>
+                <th>Utilidad</th>
+              </tr>
+            </thead>
+            <tbody id="top-vendidos-body">
+              <tr><td colspan="5"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="table-panel">
+        <div class="table-top">
+          <div>
+            <h3>Top 10 rentables</h3>
+            <p class="muted">Los que más utilidad dejan.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Ingresos</th>
+                <th>Utilidad</th>
+              </tr>
+            </thead>
+            <tbody id="top-rentables-body">
+              <tr><td colspan="5"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+
+      <article class="table-panel">
+        <div class="table-top">
+          <div>
+            <h3>Top 10 menos vendidos</h3>
+            <p class="muted">Los de menor rotación.</p>
+          </div>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>#</th>
+                <th>Producto</th>
+                <th>Cantidad</th>
+                <th>Ingresos</th>
+                <th>Utilidad</th>
+              </tr>
+            </thead>
+            <tbody id="menos-vendidos-body">
+              <tr><td colspan="5"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <section class="footer-strip">
+      <span>Resumen operativo listo para revisar desde <strong id="footer-range">—</strong>.</span>
+      <span>Generado: <strong id="footer-generated">—</strong></span>
+    </section>
+
+    <div class="status" id="status"></div>
   </main>
 
   <script>
     function resolveApiBase() {
       const explicit = String(window.__API_BASE__ || '').trim();
-      if (explicit) {
-        return explicit.replace(/\/$/, '');
-      }
+      if (explicit) return explicit.replace(/\/$/, '');
 
       const origin = String(window.location.origin || '').trim();
       if (origin && origin !== 'null' && !origin.startsWith('file:')) {
@@ -189,44 +553,165 @@
     }
 
     const API = resolveApiBase();
-    const fmtMoney = (value) => new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
-    const fmtCount = (value) => new Intl.NumberFormat('es-CO').format(Number(value) || 0);
-
+    const body = document.body;
     const statusEl = document.getElementById('status');
-    const reloadBtn = document.getElementById('reload-btn');
-    const cards = {
-      ventasHoy: document.getElementById('ventas-hoy'),
-      ventasMes: document.getElementById('ventas-mes'),
-      gastosMes: document.getElementById('gastos-mes'),
-      utilidadMes: document.getElementById('utilidad-mes'),
-      pedidosHoy: document.getElementById('pedidos-hoy'),
-      ticketPromedio: document.getElementById('ticket-promedio'),
-      ventasSemana: document.getElementById('ventas-semana'),
-      gastosHoy: document.getElementById('gastos-hoy'),
-      pedidosMes: document.getElementById('pedidos-mes'),
+    const refreshBtn = document.getElementById('refresh-btn');
+    const exportVentasBtn = document.getElementById('export-ventas-btn');
+    const exportGastosBtn = document.getElementById('export-gastos-btn');
+    const exportProductosBtn = document.getElementById('export-productos-btn');
+    const exportPdfBtn = document.getElementById('export-pdf-btn');
+    const rangeFrom = document.getElementById('range-from');
+    const rangeTo = document.getElementById('range-to');
+    const rangeLabel = document.getElementById('range-label');
+    const updatedAt = document.getElementById('updated-at');
+    const footerRange = document.getElementById('footer-range');
+    const footerGenerated = document.getElementById('footer-generated');
+    const applyRangeBtn = document.getElementById('apply-range-btn');
+    const resetRangeBtn = document.getElementById('reset-range-btn');
+    const presetButtons = Array.from(document.querySelectorAll('[data-preset]'));
+    const chartStates = {
+      ventas: document.getElementById('ventas-diarias-state'),
+      top: document.getElementById('top-productos-state'),
+      categorias: document.getElementById('categorias-state'),
     };
-
-    let charts = {
-      ventasDiarias: null,
-      topProductos: null,
+    const summaryEls = {
+      ventasRango: document.getElementById('ventas-rango'),
+      gastosRango: document.getElementById('gastos-rango'),
+      utilidadRango: document.getElementById('utilidad-rango'),
+      ticketPromedioRango: document.getElementById('ticket-promedio-rango'),
+      productosPromedioRango: document.getElementById('productos-promedio-rango'),
+      pedidosDiaRango: document.getElementById('pedidos-dia-rango'),
+      cajaActual: document.getElementById('caja-actual'),
+      cajaSub: document.getElementById('caja-sub'),
+      utilidadHoy: document.getElementById('utilidad-hoy'),
+      utilidadMes: document.getElementById('utilidad-mes'),
+      gastosHoy: document.getElementById('gastos-hoy'),
+      gastosMes: document.getElementById('gastos-mes'),
+    };
+    const tableBodies = {
+      topVendidos: document.getElementById('top-vendidos-body'),
+      topRentables: document.getElementById('top-rentables-body'),
+      menosVendidos: document.getElementById('menos-vendidos-body'),
+    };
+    const chartInstances = {
+      ventas: null,
+      top: null,
       categorias: null,
     };
+
+    const state = {
+      preset: 'semana',
+      from: '',
+      to: '',
+      resumen: null,
+      ranking: null,
+      ventasDiarias: [],
+      categorias: [],
+      caja: null,
+    };
+
+    function todayIso(date = new Date()) {
+      return ReportTools.today(date);
+    }
+
+    function shiftDays(date, days) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+    }
+
+    function startOfMonth(date = new Date()) {
+      return new Date(date.getFullYear(), date.getMonth(), 1);
+    }
+
+    function formatDisplayDate(value) {
+      if (!value) return '—';
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+    }
+
+    function formatChartDate(value) {
+      if (!value) return '';
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit' }).format(date);
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+    }
+
+    function count(value) {
+      return new Intl.NumberFormat('es-CO').format(Number(value) || 0);
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
 
     function setStatus(message, type = '') {
       statusEl.textContent = message || '';
       statusEl.className = `status ${type}`.trim();
     }
 
-    async function apiJson(url) {
-      const response = await fetch(url, { headers: { 'Content-Type': 'application/json' } });
-      const text = await response.text();
+    function setLoading(isLoading) {
+      rangeFrom.disabled = isLoading;
+      rangeTo.disabled = isLoading;
+      body.classList.toggle('loading', isLoading);
+      [refreshBtn, exportVentasBtn, exportGastosBtn, exportProductosBtn, exportPdfBtn, applyRangeBtn, resetRangeBtn, ...presetButtons].forEach((button) => {
+        button.disabled = isLoading;
+      });
+    }
 
-      let payload = null;
-      try {
-        payload = text ? JSON.parse(text) : null;
-      } catch {
-        payload = text;
+    function resolvePresetRange(preset) {
+      return ReportTools.preset(preset);
+    }
+
+    function setActivePreset(preset, shouldReload = true) {
+      state.preset = preset;
+      const range = preset === 'personalizado' ? { from: rangeFrom.value || todayIso(), to: rangeTo.value || todayIso() } : resolvePresetRange(preset);
+      state.from = range.from;
+      state.to = range.to;
+      rangeFrom.value = range.from;
+      rangeTo.value = range.to;
+      presetButtons.forEach((button) => button.classList.toggle('active', button.dataset.preset === preset));
+      updateRangeMeta();
+      if (shouldReload) {
+        void loadDashboard();
       }
+    }
+
+    function updateRangeMeta() {
+      const label = `${formatDisplayDate(state.from)} → ${formatDisplayDate(state.to)}`;
+      rangeLabel.textContent = `${label} · ${state.preset}`;
+      footerRange.textContent = label;
+    }
+
+    function buildRangeQuery() {
+      const range = ReportTools.range(rangeFrom.value, rangeTo.value);
+      rangeFrom.value = state.from = range.from;
+      rangeTo.value = state.to = range.to;
+      updateRangeMeta();
+      const params = new URLSearchParams();
+      params.set('preset', state.preset);
+      params.set('desde', rangeFrom.value || state.from || todayIso());
+      params.set('hasta', rangeTo.value || state.to || todayIso());
+      return params.toString();
+    }
+
+    async function apiJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
 
       if (!response.ok) {
         const message = payload?.error || payload?.message || `HTTP ${response.status}`;
@@ -237,156 +722,548 @@
     }
 
     function destroyCharts() {
-      Object.values(charts).forEach((chart) => {
+      Object.values(chartInstances).forEach((chart) => {
         if (chart) chart.destroy();
       });
-      charts = { ventasDiarias: null, topProductos: null, categorias: null };
+      chartInstances.ventas = null;
+      chartInstances.top = null;
+      chartInstances.categorias = null;
     }
 
-    function formatDailyLabel(value) {
-      if (!value) return '';
-      const date = new Date(`${value}T00:00:00`);
-      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit' }).format(date);
+    function setChartState(stateEl, message, isError = false) {
+      stateEl.hidden = false;
+      stateEl.textContent = message;
+      stateEl.style.color = isError ? '#b91c1c' : 'rgba(27, 27, 27, 0.56)';
     }
 
-    function renderCards(data) {
-      cards.ventasHoy.textContent = fmtMoney(data.ventas_hoy);
-      cards.ventasMes.textContent = fmtMoney(data.ventas_mes);
-      cards.gastosMes.textContent = fmtMoney(data.gastos_mes);
-      cards.utilidadMes.textContent = fmtMoney(data.utilidad_estimada);
-      cards.pedidosHoy.textContent = fmtCount(data.pedidos_hoy);
-      cards.ticketPromedio.textContent = fmtMoney(data.ticket_promedio);
-      cards.ventasSemana.textContent = fmtMoney(data.ventas_semana);
-      cards.gastosHoy.textContent = fmtMoney(data.gastos_hoy);
-      cards.pedidosMes.textContent = fmtCount(data.pedidos_mes);
+    function hideChartState(stateEl) {
+      stateEl.hidden = true;
     }
 
-    function renderCharts(ventasDiarias, topProductos, categorias) {
+    function renderSummary(resumen) {
+      if (!resumen) return;
+
+      summaryEls.ventasRango.textContent = money(resumen.ventas_rango);
+      summaryEls.gastosRango.textContent = money(resumen.gastos_rango);
+      summaryEls.utilidadRango.textContent = money(resumen.utilidad_rango);
+      summaryEls.ticketPromedioRango.textContent = money(resumen.ticket_promedio_rango);
+      summaryEls.productosPromedioRango.textContent = count(resumen.productos_promedio_pedido ?? resumen.productos_promedio_rango);
+      summaryEls.pedidosDiaRango.textContent = count(resumen.pedidos_por_dia_rango);
+
+      summaryEls.utilidadHoy.textContent = money(resumen.utilidad_hoy);
+      summaryEls.utilidadMes.textContent = money(resumen.utilidad_mes);
+      summaryEls.gastosHoy.textContent = money(resumen.gastos_hoy);
+      summaryEls.gastosMes.textContent = money(resumen.gastos_mes);
+    }
+
+    function renderCajaCard(cajaResponse) {
+      const caja = cajaResponse?.caja || null;
+      const resumen = cajaResponse?.resumen || null;
+
+      if (caja) {
+        summaryEls.cajaActual.textContent = caja.estado === 'abierta' ? 'Abierta' : 'Cerrada';
+        summaryEls.cajaSub.textContent = `${money(caja.monto_final_calculado)} · ${formatDisplayDate(caja.fecha)}`;
+        return;
+      }
+
+      summaryEls.cajaActual.textContent = 'Sin caja';
+      summaryEls.cajaSub.textContent = resumen ? `${money(resumen.monto_final_estimado)} estimados · ${formatDisplayDate(resumen.fecha)}` : 'Sin información disponible';
+    }
+
+    function renderTableRows(tbody, rows, emptyMessage, formatter) {
+      if (!Array.isArray(rows) || !rows.length) {
+        tbody.innerHTML = `
+          <tr>
+            <td colspan="5">
+              <div class="empty-state">
+                <strong>${emptyMessage}</strong>
+                Cambia el rango o recarga los datos.
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      tbody.innerHTML = rows.map((row, index) => formatter(row, index)).join('');
+    }
+
+    function renderRankingTables(ranking) {
+      if (!ranking) {
+        renderTableRows(tableBodies.topVendidos, [], 'Sin ranking disponible', () => '');
+        renderTableRows(tableBodies.topRentables, [], 'Sin ranking disponible', () => '');
+        renderTableRows(tableBodies.menosVendidos, [], 'Sin ranking disponible', () => '');
+        return;
+      }
+
+      renderTableRows(tableBodies.topVendidos, ranking.top_vendidos, 'No hay productos vendidos', (row, index) => `
+        <tr>
+          <td><span class="rank-pos">${index + 1}</span></td>
+          <td class="product-name"><strong>${esc(row.producto)}</strong><div class="muted">${esc(row.categoria || 'Sin categoría')}</div></td>
+          <td>${count(row.cantidad_vendida)}</td>
+          <td>${money(row.ingresos)}</td>
+          <td class="money">${money(row.utilidad)}</td>
+        </tr>`);
+
+      renderTableRows(tableBodies.topRentables, ranking.top_rentables, 'No hay rentabilidad disponible', (row, index) => `
+        <tr>
+          <td><span class="rank-pos">${index + 1}</span></td>
+          <td class="product-name"><strong>${esc(row.producto)}</strong><div class="muted">${esc(row.categoria || 'Sin categoría')}</div></td>
+          <td>${count(row.cantidad_vendida)}</td>
+          <td>${money(row.ingresos)}</td>
+          <td class="money">${money(row.utilidad)}</td>
+        </tr>`);
+
+      renderTableRows(tableBodies.menosVendidos, ranking.menos_vendidos, 'No hay productos con ventas bajas', (row, index) => `
+        <tr>
+          <td><span class="rank-pos">${index + 1}</span></td>
+          <td class="product-name"><strong>${esc(row.producto)}</strong><div class="muted">${esc(row.categoria || 'Sin categoría')}</div></td>
+          <td>${count(row.cantidad_vendida)}</td>
+          <td>${money(row.ingresos)}</td>
+          <td class="money">${money(row.utilidad)}</td>
+        </tr>`);
+    }
+
+    async function renderCharts(data) {
+      await ReportTools.load('chart');
       destroyCharts();
 
       const ventasCtx = document.getElementById('ventas-diarias-chart');
       const topCtx = document.getElementById('top-productos-chart');
       const catCtx = document.getElementById('categorias-chart');
 
-      charts.ventasDiarias = new Chart(ventasCtx, {
-        type: 'line',
-        data: {
-          labels: ventasDiarias.map((item) => formatDailyLabel(item.fecha)),
-          datasets: [{
-            label: 'Ingresos',
-            data: ventasDiarias.map((item) => Number(item.ingresos) || 0),
-            borderColor: '#003087',
-            backgroundColor: 'rgba(0, 48, 135, 0.14)',
-            pointBackgroundColor: '#cf1720',
-            pointBorderColor: '#cf1720',
-            tension: 0.32,
-            fill: true,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                label: (context) => fmtMoney(context.parsed.y),
+      const ventas = Array.isArray(data.ventasDiarias) ? data.ventasDiarias : [];
+      if (ventas.length) {
+        hideChartState(chartStates.ventas);
+        chartInstances.ventas = new Chart(ventasCtx, {
+          type: 'line',
+          data: {
+            labels: ventas.map((item) => formatChartDate(item.fecha)),
+            datasets: [{
+              label: 'Ingresos',
+              data: ventas.map((item) => Number(item.ingresos) || 0),
+              borderColor: '#003087',
+              backgroundColor: 'rgba(0, 48, 135, 0.14)',
+              pointBackgroundColor: '#cf1720',
+              pointBorderColor: '#cf1720',
+              tension: 0.32,
+              fill: true,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              y: {
+                beginAtZero: true,
+                ticks: { callback: (value) => money(value) },
+                grid: { color: 'rgba(15,15,15,0.06)' },
+              },
+              x: { grid: { display: false } },
+            },
+          },
+        });
+      } else {
+        setChartState(chartStates.ventas, 'Sin ventas para el período seleccionado');
+      }
+
+      const topProductos = Array.isArray(data.ranking?.top_vendidos) ? data.ranking.top_vendidos : [];
+      if (topProductos.length) {
+        hideChartState(chartStates.top);
+        chartInstances.top = new Chart(topCtx, {
+          type: 'bar',
+          data: {
+            labels: topProductos.map((item) => item.producto),
+            datasets: [{
+              label: 'Cantidad vendida',
+              data: topProductos.map((item) => Number(item.cantidad_vendida) || 0),
+              backgroundColor: '#f5c518',
+              borderRadius: 8,
+            }],
+          },
+          options: {
+            indexAxis: 'y',
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: { legend: { display: false } },
+            scales: {
+              x: { beginAtZero: true, grid: { color: 'rgba(15,15,15,0.06)' } },
+              y: { grid: { display: false } },
+            },
+          },
+        });
+      } else {
+        setChartState(chartStates.top, 'Sin productos vendidos en el período');
+      }
+
+      const categorias = Array.isArray(data.categorias) ? data.categorias : [];
+      if (categorias.length) {
+        hideChartState(chartStates.categorias);
+        chartInstances.categorias = new Chart(catCtx, {
+          type: 'doughnut',
+          data: {
+            labels: categorias.map((item) => item.categoria),
+            datasets: [{
+              data: categorias.map((item) => Number(item.ingresos) || 0),
+              backgroundColor: ['#003087', '#cf1720', '#f5c518', '#2ecc71', '#8b5cf6', '#fb923c', '#14b8a6'],
+              borderWidth: 0,
+            }],
+          },
+          options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+              legend: {
+                position: 'bottom',
+                labels: { usePointStyle: true, boxWidth: 10 },
               },
             },
           },
-          scales: {
-            y: {
-              beginAtZero: true,
-              ticks: { callback: (value) => fmtMoney(value) },
-              grid: { color: 'rgba(15,15,15,0.06)' },
-            },
-            x: { grid: { display: false } },
-          },
-        },
-      });
-
-      charts.topProductos = new Chart(topCtx, {
-        type: 'bar',
-        data: {
-          labels: topProductos.map((item) => item.producto),
-          datasets: [{
-            label: 'Cantidad vendida',
-            data: topProductos.map((item) => Number(item.cantidad_vendida) || 0),
-            backgroundColor: '#f5c518',
-            borderRadius: 8,
-          }],
-        },
-        options: {
-          indexAxis: 'y',
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              callbacks: {
-                afterLabel: (context) => {
-                  const item = topProductos[context.dataIndex];
-                  return [`Ingresos: ${fmtMoney(item?.ingresos || 0)}`, `Utilidad: ${fmtMoney(item?.utilidad || 0)}`];
-                },
-              },
-            },
-          },
-          scales: {
-            x: { beginAtZero: true, grid: { color: 'rgba(15,15,15,0.06)' } },
-            y: { grid: { display: false } },
-          },
-        },
-      });
-
-      charts.categorias = new Chart(catCtx, {
-        type: 'doughnut',
-        data: {
-          labels: categorias.map((item) => item.categoria),
-          datasets: [{
-            data: categorias.map((item) => Number(item.ingresos) || 0),
-            backgroundColor: ['#003087', '#cf1720', '#f5c518', '#2ecc71', '#8b5cf6', '#fb923c', '#14b8a6'],
-            borderWidth: 0,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          plugins: {
-            legend: {
-              position: 'bottom',
-              labels: { usePointStyle: true, boxWidth: 10 },
-            },
-            tooltip: {
-              callbacks: {
-                label: (context) => `${context.label}: ${fmtMoney(context.parsed)}`,
-              },
-            },
-          },
-        },
-      });
-    }
-
-    async function loadDashboard() {
-      setStatus('Cargando dashboard...', 'ok');
-
-      try {
-        const [resumen, ventasDiarias, topProductos, categorias] = await Promise.all([
-          apiJson(`${API}/dashboard/resumen`),
-          apiJson(`${API}/dashboard/ventas-diarias`),
-          apiJson(`${API}/dashboard/productos-top`),
-          apiJson(`${API}/dashboard/categorias`),
-        ]);
-
-        renderCards(resumen);
-        renderCharts(ventasDiarias, topProductos, categorias);
-        setStatus('Dashboard actualizado', 'ok');
-      } catch (error) {
-        destroyCharts();
-        setStatus(error.message, 'error');
+        });
+      } else {
+        setChartState(chartStates.categorias, 'Sin ventas por categoría para este período');
       }
     }
 
-    reloadBtn.addEventListener('click', () => void loadDashboard());
+    function orderDateToIso(value) {
+      if (!value) return '';
+      const [day, month, year] = String(value).split('/');
+      if (!day || !month || !year) return '';
+      return `${year}-${month}-${day}`;
+    }
+
+    function buildRowsWithExpenses(orders, expenses) {
+      return (orders || []).map((order) => {
+        return {
+          Fecha: order.fecha || '',
+          Pedido: order.numero || '',
+          Cliente: order.cliente || '',
+          Total: Number(order.total) || 0,
+          Estado: order.estado || (order.entregado ? 'Entregado' : 'Pendiente'),
+        };
+      });
+    }
+
+    async function exportVentasExcel() {
+      setLoading(true);
+      try {
+        setStatus('Generando Excel de ventas...', 'ok');
+        const query = buildRangeQuery();
+        await ReportTools.load('excel');
+        const [orders, expenses] = await Promise.all([
+          apiJson(`${API}/pedidos/rango?desde=${encodeURIComponent(orderDateToDisplay(rangeFrom.value))}&hasta=${encodeURIComponent(orderDateToDisplay(rangeTo.value))}`),
+          apiJson(`${API}/gastos/export?${query}`),
+        ]);
+
+        const rows = buildRowsWithExpenses(Array.isArray(orders) ? orders : [], expenses?.items || []);
+        if (!rows.length) {
+          throw new Error('No hay ventas para exportar en este período');
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 14 }, { wch: 12 }, { wch: 24 }, { wch: 14 }, { wch: 14 }, { wch: 14 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Ventas');
+        XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(ReportTools.dailySummary(orders, expenses?.items || [])), 'Resumen diario');
+        XLSX.writeFile(wb, fileNameFor('ventas'));
+        setStatus('Excel de ventas generado', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function orderDateToDisplay(isoDate) {
+      if (!isoDate) return '';
+      const [year, month, day] = isoDate.split('-');
+      return `${day}/${month}/${year}`;
+    }
+
+    function fileNameFor(type) {
+      return `${type}-${rangeFrom.value.replace(/-/g, '')}_${rangeTo.value.replace(/-/g, '')}.xlsx`;
+    }
+
+    async function exportGastosExcel() {
+      setLoading(true);
+      try {
+        setStatus('Generando Excel de gastos...', 'ok');
+        const data = await apiJson(`${API}/gastos/export?${buildRangeQuery()}`);
+        await ReportTools.load('excel');
+        const items = Array.isArray(data.items) ? data.items : [];
+        if (!items.length) {
+          throw new Error('No hay gastos para exportar en este período');
+        }
+
+        const rows = items.map((item) => ({
+          Fecha: formatDisplayDate(item.fecha),
+          Categoría: item.categoria || '',
+          Descripción: item.descripcion || '',
+          Valor: Number(item.valor) || 0,
+          Observaciones: item.observaciones || '',
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 34 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Gastos');
+        XLSX.writeFile(wb, fileNameFor('gastos'));
+        setStatus('Excel de gastos generado', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function exportProductosExcel() {
+      setLoading(true);
+      try {
+        setStatus('Generando Excel de productos...', 'ok');
+        const ranking = await apiJson(`${API}/dashboard/productos-ranking?${buildRangeQuery()}&limit=10`);
+        await ReportTools.load('excel');
+        const rows = Array.isArray(ranking?.reporte) ? ranking.reporte.map((row) => ({
+          Producto: row.producto,
+          Precio: Number(row.precio) || 0,
+          Costo: Number(row.costo) || 0,
+          'Ganancia estimada': Number(row.utilidad) || 0,
+          'Cantidad vendida': Number(row.cantidad_vendida) || 0,
+        })) : [];
+
+        if (!rows.length) {
+          throw new Error('No hay productos vendidos para exportar en este período');
+        }
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 34 }, { wch: 14 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Productos');
+        XLSX.writeFile(wb, fileNameFor('productos'));
+        setStatus('Excel de productos generado', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    function makePdfTable(doc, title, rows) {
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(12);
+      doc.text(title, 14, doc.lastAutoTable ? doc.lastAutoTable.finalY + 12 : 50);
+      doc.autoTable({
+        startY: doc.lastAutoTable ? doc.lastAutoTable.finalY + 16 : 54,
+        head: [[ 'Producto', 'Cant.', 'Ingresos', 'Utilidad' ]],
+        body: rows.map((row) => [row.producto, count(row.cantidad_vendida), money(row.ingresos), money(row.utilidad)]),
+        theme: 'grid',
+        styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
+        headStyles: { fillColor: [15, 15, 15], textColor: [245, 197, 24] },
+        columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+      });
+    }
+
+    async function exportPdfSummary() {
+      setLoading(true);
+      try {
+        const query = buildRangeQuery();
+        await ReportTools.load('pdf');
+        await ReportTools.load('tables');
+
+        setStatus('Generando PDF...', 'ok');
+        const [resumen, ranking, cajaResponse] = await Promise.all([
+          apiJson(`${API}/dashboard/resumen?${query}`),
+          apiJson(`${API}/dashboard/productos-ranking?${query}&limit=10`),
+          apiJson(`${API}/caja`),
+        ]);
+        const caja = cajaResponse.caja;
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({ orientation: 'p', unit: 'mm', format: 'a4' });
+
+        doc.setFillColor(15, 15, 15);
+        doc.rect(0, 0, 210, 32, 'F');
+        doc.setTextColor(245, 197, 24);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(22);
+        doc.text('SABOR +58', 14, 15);
+        doc.setTextColor(255, 255, 255);
+        doc.setFontSize(11);
+        doc.text('Resumen financiero', 14, 24);
+        doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 130, 15);
+        doc.text(`Periodo: ${rangeFrom.value} a ${rangeTo.value}`, 14, 30);
+
+        const cards = [
+          ['Ventas periodo', money(resumen.ventas_rango)],
+          ['Gastos periodo', money(resumen.gastos_rango)],
+          ['Utilidad periodo', money(resumen.utilidad_rango)],
+          ['Caja actual', caja ? caja.estado : 'Sin caja'],
+        ];
+        doc.setTextColor(15, 15, 15);
+        doc.autoTable({
+          startY: 40,
+          theme: 'grid',
+          head: [['Indicador', 'Valor']],
+          body: cards,
+          styles: { font: 'helvetica', fontSize: 9, cellPadding: 2.8 },
+          headStyles: { fillColor: [0, 48, 135], textColor: [255, 255, 255] },
+          columnStyles: { 1: { halign: 'right' } },
+        });
+
+        const topVendidos = Array.isArray(ranking.top_vendidos) ? ranking.top_vendidos.slice(0, 10) : [];
+        if (topVendidos.length) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.text('Top 10 vendidos', 14, doc.lastAutoTable.finalY + 10);
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 14,
+            head: [['Producto', 'Cantidad', 'Ingresos', 'Utilidad']],
+            body: topVendidos.map((row) => [row.producto, count(row.cantidad_vendida), money(row.ingresos), money(row.utilidad)]),
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.2 },
+            headStyles: { fillColor: [15, 15, 15], textColor: [245, 197, 24] },
+            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+          });
+        }
+
+        if (ranking.top_rentables?.length) {
+          doc.setFont('helvetica', 'bold');
+          doc.setFontSize(12);
+          doc.text('Top 10 rentables', 14, doc.lastAutoTable.finalY + 10);
+          doc.autoTable({
+            startY: doc.lastAutoTable.finalY + 14,
+            head: [['Producto', 'Cantidad', 'Ingresos', 'Utilidad']],
+            body: ranking.top_rentables.slice(0, 10).map((row) => [row.producto, count(row.cantidad_vendida), money(row.ingresos), money(row.utilidad)]),
+            theme: 'grid',
+            styles: { font: 'helvetica', fontSize: 8.5, cellPadding: 2.2 },
+            headStyles: { fillColor: [0, 48, 135], textColor: [255, 255, 255] },
+            columnStyles: { 1: { halign: 'right' }, 2: { halign: 'right' }, 3: { halign: 'right' } },
+          });
+        }
+
+        doc.save(`resumen-financiero-${rangeFrom.value.replace(/-/g, '')}_${rangeTo.value.replace(/-/g, '')}.pdf`);
+        setStatus('PDF generado', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    async function loadDashboard() {
+      setLoading(true);
+      setStatus('Cargando información financiera...', 'ok');
+      renderTableRows(tableBodies.topVendidos, [], 'Cargando...', () => '');
+      renderTableRows(tableBodies.topRentables, [], 'Cargando...', () => '');
+      renderTableRows(tableBodies.menosVendidos, [], 'Cargando...', () => '');
+      chartStates.ventas.hidden = false;
+      chartStates.top.hidden = false;
+      chartStates.categorias.hidden = false;
+      try {
+        const query = buildRangeQuery();
+        const requests = [
+          apiJson(`${API}/dashboard/resumen?${query}`),
+          apiJson(`${API}/dashboard/ventas-diarias?${query}`),
+          apiJson(`${API}/dashboard/categorias?${query}`),
+          apiJson(`${API}/dashboard/productos-ranking?${query}&limit=10`),
+          apiJson(`${API}/caja`),
+        ];
+
+        const settled = await Promise.allSettled(requests);
+        const errors = [];
+
+        const summary = settled[0].status === 'fulfilled' ? settled[0].value : null;
+        const ventasDiarias = settled[1].status === 'fulfilled' ? settled[1].value : [];
+        const categorias = settled[2].status === 'fulfilled' ? settled[2].value : [];
+        const ranking = settled[3].status === 'fulfilled' ? settled[3].value : null;
+        const caja = settled[4].status === 'fulfilled' ? settled[4].value : null;
+
+        if (settled[0].status === 'rejected') errors.push(settled[0].reason.message);
+        if (settled[1].status === 'rejected') errors.push(settled[1].reason.message);
+        if (settled[2].status === 'rejected') errors.push(settled[2].reason.message);
+        if (settled[3].status === 'rejected') errors.push(settled[3].reason.message);
+        if (settled[4].status === 'rejected') errors.push(settled[4].reason.message);
+
+        state.resumen = summary;
+        if (summary) {
+          renderSummary(summary);
+        } else {
+          Object.values(summaryEls).forEach((element) => { element.textContent = '—'; });
+        }
+
+        state.ventasDiarias = Array.isArray(ventasDiarias) ? ventasDiarias : [];
+        state.categorias = Array.isArray(categorias) ? categorias : [];
+        state.ranking = ranking;
+        state.caja = caja;
+
+        renderRankingTables(state.ranking);
+        renderCajaCard(state.caja);
+        try {
+          await renderCharts({ ventasDiarias: state.ventasDiarias, ranking: state.ranking, categorias: state.categorias });
+        } catch (error) {
+          errors.push(error.message);
+          Object.values(chartStates).forEach((element) => setChartState(element, 'No se pudieron cargar los gráficos', true));
+        }
+
+        const now = new Date();
+        const stamp = now.toLocaleString('es-CO');
+        updatedAt.textContent = stamp;
+        footerGenerated.textContent = stamp;
+
+        if (errors.length) {
+          setStatus(`Actualizado con advertencias: ${errors.join(' · ')}`, 'error');
+        } else {
+          setStatus('Dashboard actualizado', 'ok');
+        }
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    presetButtons.forEach((button) => {
+      button.addEventListener('click', () => setActivePreset(button.dataset.preset, true));
+    });
+
+    applyRangeBtn.addEventListener('click', () => {
+      state.preset = 'personalizado';
+      state.from = rangeFrom.value || state.from;
+      state.to = rangeTo.value || state.to;
+      presetButtons.forEach((button) => button.classList.toggle('active', button.dataset.preset === 'personalizado'));
+      updateRangeMeta();
+      void loadDashboard();
+    });
+
+    resetRangeBtn.addEventListener('click', () => setActivePreset('mes', true));
+    refreshBtn.addEventListener('click', () => void loadDashboard());
+    exportVentasBtn.addEventListener('click', () => void exportVentasExcel());
+    exportGastosBtn.addEventListener('click', () => void exportGastosExcel());
+    exportProductosBtn.addEventListener('click', () => void exportProductosExcel());
+    exportPdfBtn.addEventListener('click', () => void exportPdfSummary());
+
+    rangeFrom.addEventListener('change', () => {
+      state.preset = 'personalizado';
+      state.from = rangeFrom.value || state.from;
+      state.to = rangeTo.value || state.to;
+      presetButtons.forEach((button) => button.classList.toggle('active', button.dataset.preset === 'personalizado'));
+      updateRangeMeta();
+      void loadDashboard();
+    });
+    rangeTo.addEventListener('change', () => {
+      state.preset = 'personalizado';
+      state.from = rangeFrom.value || state.from;
+      state.to = rangeTo.value || state.to;
+      presetButtons.forEach((button) => button.classList.toggle('active', button.dataset.preset === 'personalizado'));
+      updateRangeMeta();
+      void loadDashboard();
+    });
+
+    const defaultRange = resolvePresetRange('semana');
+    rangeFrom.value = defaultRange.from;
+    rangeTo.value = defaultRange.to;
+    state.from = defaultRange.from;
+    state.to = defaultRange.to;
+    updateRangeMeta();
+
     void loadDashboard();
   </script>
 </body>

@@ -1,31 +1,8 @@
 const { pool } = require('../database/connection');
-
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-
-function pad(value) {
-  return String(value).padStart(2, '0');
-}
-
-function toInt(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.trunc(number) : 0;
-}
-
-function toAmount(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
-}
+const { formatIsoDate, parseIsoDate, resolveRange, toAmount, toInt } = require('./reporting.utils');
 
 function normalizeText(value) {
   return String(value ?? '').trim();
-}
-
-function todayIso(date = new Date()) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function isValidIsoDate(value) {
-  return ISO_DATE_RE.test(value) && !Number.isNaN(Date.parse(`${value}T00:00:00`));
 }
 
 function normalizeExpenseRow(row) {
@@ -36,7 +13,7 @@ function normalizeExpenseRow(row) {
     descripcion: row.descripcion ?? '',
     categoria: row.categoria ?? '',
     valor: toAmount(row.valor),
-    fecha: row.fecha ? String(row.fecha) : todayIso(),
+    fecha: row.fecha ? String(row.fecha) : null,
     observaciones: row.observaciones ?? '',
     created_at: row.created_at,
     updated_at: row.updated_at,
@@ -65,14 +42,9 @@ function buildExpensePayload(data, existing = null) {
     throw Object.assign(new Error('El valor debe ser mayor a 0'), { statusCode: 400 });
   }
 
-  const hasFecha = data.fecha !== undefined && data.fecha !== null && String(data.fecha).trim() !== '';
-  const fecha = hasFecha
-    ? normalizeText(data.fecha)
-    : normalizeText(existing?.fecha) || todayIso();
-
-  if (!isValidIsoDate(fecha)) {
-    throw Object.assign(new Error('La fecha debe tener formato YYYY-MM-DD'), { statusCode: 400 });
-  }
+  const fecha = data.fecha !== undefined && String(data.fecha).trim() !== ''
+    ? parseIsoDate(data.fecha, formatIsoDate(), 'La fecha')
+    : normalizeText(existing?.fecha) || formatIsoDate();
 
   const observaciones = data.observaciones !== undefined
     ? normalizeText(data.observaciones)
@@ -87,53 +59,34 @@ function buildExpensePayload(data, existing = null) {
   };
 }
 
-function buildFilters({ page = 1, limit = 10, desde, hasta, categoria } = {}) {
+function buildFilters(options = {}) {
+  const range = resolveRange(options, { defaultPreset: 'mes' });
   const conditions = [];
   const params = [];
 
-  const pageNumber = Math.max(1, Math.trunc(Number(page) || 1));
-  const limitNumber = Math.min(100, Math.max(1, Math.trunc(Number(limit) || 10)));
-
-  if (desde) {
-    if (!isValidIsoDate(desde)) {
-      throw Object.assign(new Error('La fecha inicial debe tener formato YYYY-MM-DD'), { statusCode: 400 });
-    }
-
-    params.push(desde);
+  if (range.desde) {
+    params.push(range.desde);
     conditions.push(`g.fecha >= $${params.length}::date`);
   }
 
-  if (hasta) {
-    if (!isValidIsoDate(hasta)) {
-      throw Object.assign(new Error('La fecha final debe tener formato YYYY-MM-DD'), { statusCode: 400 });
-    }
-
-    params.push(hasta);
+  if (range.hasta) {
+    params.push(range.hasta);
     conditions.push(`g.fecha <= $${params.length}::date`);
   }
 
-  const categoriaText = normalizeText(categoria);
+  const categoriaText = normalizeText(options.categoria);
   if (categoriaText) {
     params.push(`%${categoriaText}%`);
     conditions.push(`g.categoria ILIKE $${params.length}`);
   }
 
-  if (conditions.length >= 2) {
-    const dateConditions = conditions.filter((condition) => condition.startsWith('g.fecha'));
-    if (dateConditions.length === 2 && desde && hasta && desde > hasta) {
-      const fromIndex = params.findIndex((value) => value === desde);
-      const toIndex = params.findIndex((value) => value === hasta);
-      if (fromIndex !== -1 && toIndex !== -1) {
-        [params[fromIndex], params[toIndex]] = [params[toIndex], params[fromIndex]];
-      }
-    }
-  }
-
   return {
-    pageNumber,
-    limitNumber,
+    range,
     conditions,
     params,
+    pageNumber: Math.max(1, Math.trunc(Number(options.page) || 1)),
+    limitNumber: Math.min(100, Math.max(1, Math.trunc(Number(options.limit) || 10))),
+    exportMode: Boolean(options.export),
   };
 }
 
@@ -142,7 +95,7 @@ function buildWhereSql(conditions) {
 }
 
 async function listGastos(options = {}) {
-  const { pageNumber, limitNumber, conditions, params } = buildFilters(options);
+  const { range, pageNumber, limitNumber, conditions, params, exportMode } = buildFilters(options);
   const whereSql = buildWhereSql(conditions);
 
   const countResult = await pool.query(
@@ -154,8 +107,9 @@ async function listGastos(options = {}) {
 
   const total = toInt(countResult.rows[0]?.total);
   const totalPages = Math.max(1, Math.ceil(total / limitNumber));
-  const currentPage = Math.min(pageNumber, totalPages);
-  const offset = (currentPage - 1) * limitNumber;
+  const currentPage = exportMode ? 1 : Math.min(pageNumber, totalPages);
+  const effectiveLimit = exportMode ? Math.max(total, 1) : limitNumber;
+  const offset = exportMode ? 0 : (currentPage - 1) * effectiveLimit;
 
   const rowsResult = await pool.query(
     `SELECT g.id,
@@ -169,16 +123,15 @@ async function listGastos(options = {}) {
      FROM gastos g
      ${whereSql}
      ORDER BY g.fecha DESC, g.id DESC
-     LIMIT $${params.length + 1}
-     OFFSET $${params.length + 2}`,
-    [...params, limitNumber, offset]
+     ${exportMode ? '' : `LIMIT $${params.length + 1} OFFSET $${params.length + 2}`}`,
+    exportMode ? params : [...params, effectiveLimit, offset]
   );
 
   return {
     items: rowsResult.rows.map(normalizeExpenseRow),
     pagination: {
       page: currentPage,
-      limit: limitNumber,
+      limit: exportMode ? total || 1 : effectiveLimit,
       total,
       totalPages,
     },
@@ -187,8 +140,9 @@ async function listGastos(options = {}) {
       totalRegistros: total,
     },
     filters: {
-      desde: options.desde ? String(options.desde) : null,
-      hasta: options.hasta ? String(options.hasta) : null,
+      preset: range.preset,
+      desde: range.desde,
+      hasta: range.hasta,
       categoria: normalizeText(options.categoria) || null,
     },
   };

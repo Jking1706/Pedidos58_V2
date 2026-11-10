@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Sabor +58 - Caja</title>
+  <script src="/report-tools.js"></script>
+  <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      --rojo: #cf1720;
+      --amarillo: #f5c518;
+      --azul: #003087;
+      --negro: #0f0f0f;
+      --verde: #2ecc71;
+      --sombra: 0 6px 24px rgba(0, 0, 0, 0.08);
+      --borde: 1px solid rgba(15, 15, 15, 0.08);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: 'Nunito', sans-serif; background: linear-gradient(180deg, #f7f4ee 0%, #f2efe9 100%); color: #1b1b1b; min-height: 100vh; }
+    a { color: inherit; text-decoration: none; }
+
+    header { position: sticky; top: 0; z-index: 20; background: rgba(15, 15, 15, 0.96); color: white; border-bottom: 4px solid var(--amarillo); backdrop-filter: blur(10px); }
+    .topbar { max-width: 1360px; margin: 0 auto; min-height: 68px; padding: 0 20px; display: flex; align-items: center; justify-content: space-between; gap: 16px; }
+    .brand { font-family: 'Bebas Neue', sans-serif; font-size: 1.95rem; letter-spacing: 2px; color: var(--amarillo); display: flex; align-items: baseline; gap: 10px; white-space: nowrap; }
+    .brand span { color: var(--rojo); }
+    .brand small { color: rgba(255, 255, 255, 0.55); font-size: 0.85rem; letter-spacing: 1px; }
+    .top-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+
+    .btn-link, .btn, .btn-secondary, .btn-danger { border: none; border-radius: 12px; padding: 10px 14px; font-family: inherit; font-weight: 800; cursor: pointer; transition: transform 0.15s ease, opacity 0.15s ease, background 0.15s ease; }
+    .btn-link { background: rgba(255, 255, 255, 0.1); color: white; }
+    .btn-link:hover, .btn:hover, .btn-secondary:hover, .btn-danger:hover { transform: translateY(-1px); }
+    .btn { background: var(--azul); color: white; }
+    .btn-secondary { background: #dfe7f7; color: #18346b; }
+    .btn-danger { background: #ffd9dc; color: #8e0f17; }
+
+    main { max-width: 1360px; margin: 0 auto; padding: 22px 20px 40px; }
+    .hero { display: flex; justify-content: space-between; gap: 18px; align-items: flex-end; margin-bottom: 18px; flex-wrap: wrap; }
+    .hero-copy h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.2rem, 4vw, 3.6rem); letter-spacing: 1px; color: var(--negro); line-height: 0.95; }
+    .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 72ch; line-height: 1.5; }
+    .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .summary-grid { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
+    .summary-card, .panel, .table-panel { background: white; border: var(--borde); border-radius: 18px; box-shadow: var(--sombra); }
+    .summary-card { padding: 18px; border-top: 4px solid transparent; }
+    .summary-card.azul { border-top-color: var(--azul); }
+    .summary-card.verde { border-top-color: var(--verde); }
+    .summary-card.rojo { border-top-color: var(--rojo); }
+    .summary-card.amarillo { border-top-color: var(--amarillo); }
+    .summary-label { text-transform: uppercase; letter-spacing: 0.6px; font-size: 0.75rem; color: rgba(27, 27, 27, 0.55); font-weight: 800; }
+    .summary-value { margin-top: 8px; font-family: 'Bebas Neue', sans-serif; font-size: 2rem; letter-spacing: 1px; color: var(--negro); line-height: 1; }
+    .summary-sub { margin-top: 6px; color: rgba(27, 27, 27, 0.6); font-size: 0.8rem; font-weight: 700; }
+
+    .layout { display: grid; grid-template-columns: 360px minmax(0, 1fr); gap: 18px; align-items: start; }
+    .panel { padding: 18px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; margin-bottom: 16px; flex-wrap: wrap; }
+    .panel-head h2, .panel-head h3 { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--negro); font-size: 1.5rem; }
+    .muted { color: rgba(27, 27, 27, 0.62); font-size: 0.86rem; line-height: 1.45; }
+
+    .form-grid { display: grid; gap: 12px; }
+    .field { display: grid; gap: 6px; }
+    .field.full { grid-column: 1 / -1; }
+    label { font-weight: 800; color: rgba(27, 27, 27, 0.8); font-size: 0.84rem; letter-spacing: 0.2px; }
+    input, textarea, select { width: 100%; border: 1px solid rgba(15, 15, 15, 0.12); border-radius: 12px; padding: 11px 12px; font: inherit; background: #fff; color: #111; outline: none; }
+    input:focus, textarea:focus, select:focus { border-color: rgba(0, 48, 135, 0.4); box-shadow: 0 0 0 3px rgba(0, 48, 135, 0.08); }
+    .form-actions, .toolbar, .pager { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; }
+    .form-actions { margin-top: 8px; }
+    .notice { margin-top: 10px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
+    .notice.ok { color: #15803d; }
+    .notice.error { color: #b91c1c; }
+
+    .caja-state {
+      display: grid;
+      gap: 10px;
+      padding: 14px;
+      border-radius: 16px;
+      background: linear-gradient(180deg, rgba(0, 48, 135, 0.06) 0%, rgba(255, 255, 255, 0.8) 100%);
+      border: 1px solid rgba(0, 48, 135, 0.08);
+      margin-bottom: 14px;
+    }
+
+    .state-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      border-radius: 999px;
+      padding: 6px 12px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      width: fit-content;
+    }
+    .state-badge.on { background: #e5f7eb; color: #166534; }
+    .state-badge.off { background: #fde8e8; color: #991b1b; }
+
+    .table-panel { padding: 0; overflow: hidden; }
+    .table-top { padding: 18px; display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; min-width: 1020px; }
+    thead th { text-align: left; padding: 14px 16px; background: #111; color: var(--amarillo); font-family: 'Bebas Neue', sans-serif; font-size: 1rem; letter-spacing: 1px; white-space: nowrap; }
+    tbody tr { border-bottom: 1px solid rgba(15, 15, 15, 0.08); }
+    tbody tr:hover { background: #fffdf4; }
+    td { padding: 14px 16px; vertical-align: top; font-size: 0.88rem; color: rgba(27, 27, 27, 0.92); }
+    .money { font-family: 'Bebas Neue', sans-serif; font-size: 1.15rem; color: var(--rojo); letter-spacing: 0.6px; }
+    .empty-state { padding: 30px 18px; text-align: center; color: rgba(27, 27, 27, 0.55); }
+    .empty-state strong { display: block; color: #111; font-size: 1.1rem; margin-bottom: 8px; }
+
+    .status { margin-top: 12px; min-height: 22px; font-size: 0.9rem; font-weight: 700; }
+    .status.ok { color: #15803d; }
+    .status.error { color: #b91c1c; }
+
+    .history-card {
+      margin-top: 18px;
+    }
+
+    .history-note {
+      margin-top: 10px;
+      color: rgba(27, 27, 27, 0.62);
+      font-size: 0.82rem;
+      line-height: 1.45;
+    }
+
+    @media (max-width: 1100px) {
+      .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 640px) {
+      .topbar { padding: 12px 14px; align-items: flex-start; flex-direction: column; }
+      .brand { font-size: 1.65rem; }
+      main { padding: 16px 14px 28px; }
+      .summary-grid { grid-template-columns: 1fr; }
+      .panel { padding: 14px; }
+      .table-top { padding: 14px; }
+      .toolbar { width: 100%; }
+      .toolbar .btn-secondary, .toolbar .btn, .toolbar .btn-danger { flex: 1; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="topbar">
+      <div class="brand">SABOR <span>+58</span> <small>· CAJA</small></div>
+      <div class="top-actions">
+        <a class="btn-link" href="/admin">Pedidos</a>
+        <a class="btn-link" href="/admin-dashboard">Dashboard</a>
+        <a class="btn-link" href="/admin-gastos">Gastos</a>
+        <a class="btn-link" href="/admin-productos">Productos</a>
+        <a class="btn-link" href="/admin-categorias">Categorías</a>
+        <a class="btn-link" href="/">Menú</a>
+      </div>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero">
+      <div class="hero-copy">
+        <h1>Caja diaria</h1>
+        <p>Abre y cierra la caja del día con ventas y gastos acumulados desde PostgreSQL. La vista muestra el estado real de la jornada y el historial reciente.</p>
+      </div>
+      <div class="hero-actions">
+        <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
+        <a class="btn" href="/admin-dashboard">Volver al dashboard</a>
+      </div>
+    </section>
+
+    <section class="summary-grid">
+      <article class="summary-card azul"><div class="summary-label">Fecha</div><div class="summary-value" id="summary-fecha">—</div><div class="summary-sub" id="summary-estado">—</div></article>
+      <article class="summary-card rojo"><div class="summary-label">Caja inicial</div><div class="summary-value" id="summary-inicial">—</div><div class="summary-sub">Monto de apertura</div></article>
+      <article class="summary-card azul"><div class="summary-label">Ventas acumuladas</div><div class="summary-value" id="summary-ventas">—</div><div class="summary-sub" id="summary-pedidos">—</div></article>
+      <article class="summary-card verde"><div class="summary-label">Gastos acumulados</div><div class="summary-value" id="summary-gastos">—</div><div class="summary-sub" id="summary-lineas">—</div></article>
+      <article class="summary-card amarillo"><div class="summary-label">Final estimado</div><div class="summary-value" id="summary-final">—</div><div class="summary-sub" id="summary-utilidad">—</div></article>
+    </section>
+
+    <section class="layout">
+      <article class="panel">
+        <div class="panel-head">
+          <div>
+            <h2>Gestión de caja</h2>
+            <p class="muted">Selecciona una fecha, define el monto inicial y abre o cierra la caja según el estado actual.</p>
+          </div>
+        </div>
+
+        <div class="caja-state">
+          <div class="toolbar">
+            <label class="field" style="flex: 1 1 180px;">
+              <span>Fecha</span>
+              <input id="fecha" type="date" />
+            </label>
+            <label class="field" style="flex: 1 1 180px;">
+              <span>Monto inicial</span>
+              <input id="monto-inicial" type="number" min="0" step="0.01" value="100000" />
+            </label>
+          </div>
+
+          <div class="state-badge off" id="state-badge">Sin caja</div>
+          <div class="muted" id="state-text">La caja del día no está abierta todavía.</div>
+          <div class="toolbar">
+            <button class="btn" id="open-btn" type="button">Abrir caja</button>
+            <button class="btn-danger" id="close-btn" type="button">Cerrar caja</button>
+          </div>
+          <div class="history-note">Si la caja ya existe, el sistema mostrará sus valores reales y deshabilitará la acción que no corresponda.</div>
+        </div>
+
+        <div class="notice" id="form-notice"></div>
+      </article>
+
+      <article class="table-panel history-card">
+        <div class="table-top">
+          <div>
+            <h3>Historial de cajas</h3>
+            <p class="muted">Últimos cierres registrados en el sistema.</p>
+          </div>
+        </div>
+
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th>Fecha</th>
+                <th>Estado</th>
+                <th>Inicial</th>
+                <th>Ventas</th>
+                <th>Gastos</th>
+                <th>Final</th>
+              </tr>
+            </thead>
+            <tbody id="history-body">
+              <tr><td colspan="6"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </article>
+    </section>
+
+    <div class="status" id="status"></div>
+  </main>
+
+  <script>
+    function resolveApiBase() {
+      const explicit = String(window.__API_BASE__ || '').trim();
+      if (explicit) return explicit.replace(/\/$/, '');
+
+      const origin = String(window.location.origin || '').trim();
+      if (origin && origin !== 'null' && !origin.startsWith('file:')) {
+        return `${origin}/api`;
+      }
+
+      return 'http://localhost:3000/api';
+    }
+
+    const API = resolveApiBase();
+    const statusEl = document.getElementById('status');
+    const formNotice = document.getElementById('form-notice');
+    const reloadBtn = document.getElementById('reload-btn');
+    const openBtn = document.getElementById('open-btn');
+    const closeBtn = document.getElementById('close-btn');
+    const fechaInput = document.getElementById('fecha');
+    const montoInicialInput = document.getElementById('monto-inicial');
+    const historyBody = document.getElementById('history-body');
+    const stateBadge = document.getElementById('state-badge');
+    const stateText = document.getElementById('state-text');
+    const summary = {
+      fecha: document.getElementById('summary-fecha'),
+      estado: document.getElementById('summary-estado'),
+      inicial: document.getElementById('summary-inicial'),
+      ventas: document.getElementById('summary-ventas'),
+      pedidos: document.getElementById('summary-pedidos'),
+      gastos: document.getElementById('summary-gastos'),
+      lineas: document.getElementById('summary-lineas'),
+      final: document.getElementById('summary-final'),
+      utilidad: document.getElementById('summary-utilidad'),
+    };
+
+    let currentCaja = null;
+    let currentResumen = null;
+
+    function todayIso() {
+      return ReportTools.today();
+    }
+
+    function money(value) {
+      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+    }
+
+    function formatDate(value) {
+      if (!value) return '—';
+      const date = new Date(`${value}T00:00:00`);
+      if (Number.isNaN(date.getTime())) return String(value);
+      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+    }
+
+    function esc(value) {
+      return String(value ?? '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+    }
+
+    function setStatus(message, type = '') {
+      statusEl.textContent = message || '';
+      statusEl.className = `status ${type}`.trim();
+    }
+
+    function setNotice(message, type = '') {
+      formNotice.textContent = message || '';
+      formNotice.className = `notice ${type}`.trim();
+    }
+
+    async function apiJson(url, options = {}) {
+      const response = await fetch(url, {
+        headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+        ...options,
+      });
+
+      const text = await response.text();
+      let payload = null;
+      try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+
+      if (!response.ok) {
+        const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+        throw new Error(message);
+      }
+
+      return payload;
+    }
+
+    function normalizeCaja(data) {
+      if (!data) return null;
+      return {
+        ...data,
+        id: Number(data.id) || 0,
+        monto_inicial: Number(data.monto_inicial) || 0,
+        ventas: Number(data.ventas) || 0,
+        gastos: Number(data.gastos) || 0,
+        monto_final: Number(data.monto_final) || 0,
+        ventas_calculadas: Number(data.ventas_calculadas) || 0,
+        gastos_calculados: Number(data.gastos_calculados) || 0,
+        monto_final_calculado: Number(data.monto_final_calculado) || 0,
+        utilidad_operativa: Number(data.utilidad_operativa) || 0,
+      };
+    }
+
+    function renderSummary(resumen, caja) {
+      const fecha = resumen?.fecha || fechaInput.value;
+      const estado = caja?.estado || 'sin caja';
+      const estadoLabel = caja ? (caja.estado === 'abierta' ? 'Caja abierta' : 'Caja cerrada') : 'Sin caja abierta';
+
+      summary.fecha.textContent = formatDate(fecha);
+      summary.estado.textContent = estadoLabel;
+      summary.inicial.textContent = money(resumen?.monto_inicial ?? caja?.monto_inicial ?? 0);
+      summary.ventas.textContent = money(resumen?.ventas ?? 0);
+      summary.pedidos.textContent = `${Number(resumen?.pedidos || 0)} pedidos`;
+      summary.gastos.textContent = money(resumen?.gastos ?? 0);
+      summary.lineas.textContent = `${Number(resumen?.registros_gastos || 0)} registros actuales`;
+      summary.final.textContent = money(resumen?.monto_final_estimado ?? caja?.monto_final_calculado ?? 0);
+      summary.utilidad.textContent = `Utilidad operativa ${money(resumen?.utilidad_operativa ?? 0)}`;
+
+      stateBadge.textContent = caja ? (caja.estado === 'abierta' ? 'Caja abierta' : 'Caja cerrada') : 'Sin caja';
+      stateBadge.className = `state-badge ${caja && caja.estado === 'abierta' ? 'on' : 'off'}`;
+      stateText.textContent = caja
+        ? `La caja del ${formatDate(caja.fecha)} tiene un monto final estimado de ${money(caja.monto_final_calculado)}.`
+        : `No existe una caja abierta para ${formatDate(fecha)}. Puedes abrirla con el monto inicial que corresponda.`;
+
+      openBtn.disabled = Boolean(caja);
+      closeBtn.disabled = !caja || caja.estado !== 'abierta';
+      montoInicialInput.disabled = Boolean(caja);
+    }
+
+    function renderHistory(historial) {
+      if (!Array.isArray(historial) || !historial.length) {
+        historyBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>No hay cajas registradas</strong>
+                Los cierres aparecerán aquí cuando se registre el primero.
+              </div>
+            </td>
+          </tr>`;
+        return;
+      }
+
+      historyBody.innerHTML = historial.map((item) => `
+        <tr>
+          <td>${formatDate(item.fecha)}</td>
+          <td><strong>${esc(item.estado === 'abierta' ? 'Abierta' : 'Cerrada')}</strong></td>
+          <td>${money(item.monto_inicial)}</td>
+          <td>${money(item.ventas)}</td>
+          <td>${money(item.gastos)}</td>
+          <td class="money">${money(item.monto_final)}</td>
+        </tr>`).join('');
+    }
+
+    async function loadCaja() {
+      [fechaInput, reloadBtn, openBtn, closeBtn].forEach((element) => { element.disabled = true; });
+      setStatus('Cargando caja...', 'ok');
+      historyBody.innerHTML = `
+        <tr><td colspan="6"><div class="empty-state"><strong>Cargando...</strong> Espera un momento.</div></td></tr>`;
+
+      try {
+        const data = await apiJson(`${API}/caja?fecha=${encodeURIComponent(fechaInput.value)}`);
+        currentCaja = normalizeCaja(data.caja);
+        currentResumen = data.resumen || null;
+        renderSummary(currentResumen, currentCaja);
+        if (currentCaja?.estado === 'cerrada') {
+          stateText.textContent = `Cierre guardado: ${money(currentCaja.monto_final)}. Diferencia con movimientos actuales: ${money(data.diferencia_desde_cierre)}.`;
+        }
+        renderHistory(Array.isArray(data.historial) ? data.historial.map(normalizeCaja) : []);
+        setStatus(currentCaja ? `Caja ${currentCaja.estado}` : 'Caja lista', 'ok');
+      } catch (error) {
+        currentCaja = null;
+        currentResumen = null;
+        renderSummary(null, null);
+        openBtn.disabled = closeBtn.disabled = true;
+        historyBody.innerHTML = `
+          <tr>
+            <td colspan="6">
+              <div class="empty-state">
+                <strong>Error al cargar caja</strong>
+                ${esc(error.message)}
+              </div>
+            </td>
+          </tr>`;
+        setStatus(error.message, 'error');
+      } finally {
+        fechaInput.disabled = reloadBtn.disabled = false;
+      }
+    }
+
+    async function openCaja() {
+      openBtn.disabled = true;
+      try {
+        const monto = Number(montoInicialInput.value);
+        if (!Number.isFinite(monto) || monto < 0) throw new Error('El monto inicial debe ser mayor o igual a 0');
+
+        await apiJson(`${API}/caja/abrir`, {
+          method: 'POST',
+          body: JSON.stringify({ fecha: fechaInput.value, monto_inicial: monto }),
+        });
+
+        setNotice('Caja abierta', 'ok');
+        await loadCaja();
+      } catch (error) {
+        setNotice(error.message, 'error');
+        await loadCaja();
+      }
+    }
+
+    async function closeCaja() {
+      if (!window.confirm('¿Cerrar la caja de esta fecha?')) {
+        return;
+      }
+
+      try {
+        closeBtn.disabled = true;
+        await apiJson(`${API}/caja/cerrar`, {
+          method: 'POST',
+          body: JSON.stringify({ fecha: fechaInput.value }),
+        });
+
+        setNotice('Caja cerrada', 'ok');
+        await loadCaja();
+      } catch (error) {
+        setNotice(error.message, 'error');
+        await loadCaja();
+      }
+    }
+
+    fechaInput.value = todayIso();
+    reloadBtn.addEventListener('click', () => void loadCaja());
+    openBtn.addEventListener('click', () => void openCaja());
+    closeBtn.addEventListener('click', () => void closeCaja());
+    fechaInput.addEventListener('change', () => void loadCaja());
+
+    void loadCaja();
+  </script>
+</body>
+</html>

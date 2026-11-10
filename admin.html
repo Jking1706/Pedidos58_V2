@@ -110,6 +110,7 @@
   <div class="logo">SABOR <span>+58</span> <span style="font-size:1rem;color:#aaa;letter-spacing:1px">· ADMIN</span></div>
   <div class="header-right">
     <a href="/admin-dashboard" class="btn-volver">Dashboard</a>
+    <a href="/admin-caja" class="btn-volver">Caja</a>
     <a href="/admin-gastos" class="btn-volver">Gastos</a>
     <a href="/admin-productos" class="btn-volver">Productos</a>
     <a href="/admin-categorias" class="btn-volver">Categorías</a>
@@ -270,9 +271,9 @@ async function cargarStats() {
     document.getElementById('top-productos').innerHTML = d.top_productos.length
       ? d.top_productos.map(p => `
           <div class="top-item">
-            <span class="top-nombre">${p.nombre}</span>
+            <span class="top-nombre">${esc(p.nombre)}</span>
             <div class="top-bar-wrap"><div class="top-bar" style="width:${Math.round(p.cantidad/max*100)}%"></div></div>
-            <span class="top-cant">${p.cantidad}</span>
+            <span class="top-cant">${esc(p.cantidad)}</span>
           </div>`).join('')
       : '<div class="sin-datos"><p>Sin datos aún</p></div>';
   } catch(e) {
@@ -301,6 +302,10 @@ async function buscar() {
   }
 }
 
+function esc(value) {
+  return String(value ?? '').replace(/[&<>"']/g, (char) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+}
+
 function renderTabla(data) {
   const tbody = document.getElementById('tbody-pedidos');
   const info = document.getElementById('tabla-info');
@@ -322,13 +327,13 @@ function renderTabla(data) {
     const items = Array.isArray(p.items) ? p.items : JSON.parse(p.items);
     const itemsStr = items.map(i => `${i.qty}× ${i.nombre}`).join(', ');
     return `<tr class="${p.entregado?'entregado':''}">
-      <td class="td-num">#${p.numero}</td>
-      <td class="td-cliente">${p.cliente || '<span style="color:#bbb">—</span>'}</td>
-      <td class="td-notas">${p.notas || '<span style="color:#bbb">—</span>'}</td>
-      <td class="td-items">${itemsStr}</td>
+      <td class="td-num">#${esc(p.numero)}</td>
+      <td class="td-cliente">${p.cliente ? esc(p.cliente) : '<span style="color:#bbb">—</span>'}</td>
+      <td class="td-notas">${p.notas ? esc(p.notas) : '<span style="color:#bbb">—</span>'}</td>
+      <td class="td-items">${esc(itemsStr)}</td>
       <td class="td-total">${fmt(p.total)}</td>
-      <td class="td-hora">${p.hora}</td>
-      <td class="td-hora">${p.fecha}</td>
+      <td class="td-hora">${esc(p.hora)}</td>
+      <td class="td-hora">${esc(p.fecha)}</td>
       <td><span class="tag ${p.entregado?'entregado':'pendiente'}">${p.entregado?'✓ Entregado':'⏳ Pendiente'}</span></td>
     </tr>`;
   }).join('');
@@ -356,7 +361,7 @@ function renderResumenPeriodo(data) {
     <div class="top-item"><span class="top-nombre">Entregados</span><span class="top-cant">${entregados}</span></div>
     <div class="top-item"><span class="top-nombre">Ventas totales</span><span class="top-cant" style="color:var(--verde)">${fmt(total)}</span></div>
     <div class="top-item"><span class="top-nombre">Ticket promedio</span><span class="top-cant">${fmt(promedio)}</span></div>
-    ${mejorDia ? `<div class="top-item"><span class="top-nombre">Mejor día</span><span class="top-cant" style="font-size:.85rem">${mejorDia[0]}</span></div>` : ''}
+    ${mejorDia ? `<div class="top-item"><span class="top-nombre">Mejor día</span><span class="top-cant" style="font-size:.85rem">${esc(mejorDia[0])}</span></div>` : ''}
   `;
 }
 

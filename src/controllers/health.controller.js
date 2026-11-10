@@ -8,6 +8,8 @@ async function healthCheck() {
     payload: {
       status: 'ok',
       database: 'connected',
+      uptimeSeconds: Math.round(process.uptime()),
+      timestamp: new Date().toISOString(),
     },
   };
 }

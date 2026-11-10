@@ -1,193 +1,259 @@
 const { pool } = require('../database/connection');
+const {
+  businessDate,
+  formatIsoDate,
+  resolveRange,
+  shiftDays,
+  startOfMonth,
+  toAmount,
+  toInt,
+} = require('./reporting.utils');
 
-const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
-const SAFE_ITEM_ID_SQL = "(CASE WHEN NULLIF(item->>'id', '') ~ '^[0-9]+$' THEN (item->>'id')::int END)";
+const SAFE_ITEM_ID_SQL = "(CASE WHEN NULLIF(item->>'id', '') ~ '^[0-9]{1,10}$' THEN CASE WHEN (item->>'id')::bigint <= 2147483647 THEN (item->>'id')::int END END)";
+const ITEM_COST_SQL = "(CASE WHEN NULLIF(item->>'costo_unitario', '') ~ '^[0-9]+([.][0-9]+)?$' THEN (item->>'costo_unitario')::numeric ELSE COALESCE(pr.costo, 0) END)";
 const SAFE_ITEM_PRICE_SQL = "(CASE WHEN NULLIF(item->>'precio', '') ~ '^-?[0-9]+([.][0-9]+)?$' THEN (item->>'precio')::numeric ELSE 0 END)";
 const SAFE_ITEM_QTY_SQL = "(CASE WHEN NULLIF(item->>'qty', '') ~ '^-?[0-9]+([.][0-9]+)?$' THEN (item->>'qty')::numeric ELSE 1 END)";
 
-function pad(value) {
-  return String(value).padStart(2, '0');
+function buildRangeLabel({ desde, hasta }) {
+  return `${desde} → ${hasta}`;
 }
 
-function toInt(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.trunc(number) : 0;
-}
-
-function toAmount(value) {
-  const number = Number(value);
-  return Number.isFinite(number) ? Math.round(number * 100) / 100 : 0;
-}
-
-function startOfMonth(date = new Date()) {
-  return new Date(date.getFullYear(), date.getMonth(), 1);
-}
-
-function shiftDays(date, days) {
-  return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
-}
-
-function formatIsoDate(date = new Date()) {
-  return `${date.getFullYear()}-${pad(date.getMonth() + 1)}-${pad(date.getDate())}`;
-}
-
-function formatOrderDate(date = new Date()) {
-  return `${pad(date.getDate())}/${pad(date.getMonth() + 1)}/${date.getFullYear()}`;
-}
-
-function parseIsoDate(value, fallback, label) {
-  if (value === undefined || value === null || String(value).trim() === '') {
-    return fallback;
-  }
-
-  const text = String(value).trim();
-  if (!ISO_DATE_RE.test(text) || Number.isNaN(Date.parse(`${text}T00:00:00`))) {
-    throw Object.assign(new Error(`${label} debe tener formato YYYY-MM-DD`), { statusCode: 400 });
-  }
-
-  return text;
-}
-
-function resolveRange(query = null) {
-  const baseDate = new Date();
-  const defaultDesde = formatIsoDate(startOfMonth(baseDate));
-  const defaultHasta = formatIsoDate(baseDate);
-
-  let desde = parseIsoDate(query?.get?.('desde'), defaultDesde, 'La fecha inicial');
-  let hasta = parseIsoDate(query?.get?.('hasta'), defaultHasta, 'La fecha final');
-
-  if (desde > hasta) {
-    [desde, hasta] = [hasta, desde];
-  }
-
-  return { desde, hasta };
-}
-
-function orderRangeFromIso(desde, hasta) {
-  const desdeDate = new Date(`${desde}T00:00:00`);
-  const hastaDate = new Date(`${hasta}T00:00:00`);
-
-  return {
-    desde: formatOrderDate(desdeDate),
-    hasta: formatOrderDate(hastaDate),
-  };
-}
-
-function buildOrderRangeClause(startIndex = 1) {
-  return `to_date(fecha, 'DD/MM/YYYY') BETWEEN to_date($${startIndex}, 'DD/MM/YYYY') AND to_date($${startIndex + 1}, 'DD/MM/YYYY')`;
-}
-
-async function getDashboardResumen() {
-  const now = new Date();
-  const todayOrder = formatOrderDate(now);
-  const weekStartOrder = formatOrderDate(shiftDays(now, -6));
-  const monthStartOrder = formatOrderDate(startOfMonth(now));
-  const todayIso = formatIsoDate(now);
-  const monthStartIso = formatIsoDate(startOfMonth(now));
-
-  const ventasHoyResult = await pool.query(
-    'SELECT COALESCE(SUM(total), 0)::numeric AS total, COUNT(*)::int AS pedidos FROM pedidos WHERE fecha = $1',
-    [todayOrder]
-  );
-
-  const ventasSemanaResult = await pool.query(
-    `SELECT COALESCE(SUM(total), 0)::numeric AS total
-     FROM pedidos
-     WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-       AND ${buildOrderRangeClause(1)}`,
-    [weekStartOrder, todayOrder]
-  );
-
-  const ventasMesResult = await pool.query(
-    `SELECT COALESCE(SUM(total), 0)::numeric AS total, COUNT(*)::int AS pedidos
-     FROM pedidos
-     WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-       AND ${buildOrderRangeClause(1)}`,
-    [monthStartOrder, todayOrder]
-  );
-
-  const gastosHoyResult = await pool.query(
-    'SELECT COALESCE(SUM(valor), 0)::numeric AS total FROM gastos WHERE fecha = $1::date',
-    [todayIso]
-  );
-
-  const gastosMesResult = await pool.query(
-    'SELECT COALESCE(SUM(valor), 0)::numeric AS total FROM gastos WHERE fecha BETWEEN $1::date AND $2::date',
-    [monthStartIso, todayIso]
-  );
-
-  const utilidadMesResult = await pool.query(
-    `WITH pedidos_mes AS (
-       SELECT items
+async function getOrderMetrics(desde, hasta) {
+  const result = await pool.query(
+    `WITH pedidos_filtrados AS (
+       SELECT id, total, items
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND ${buildOrderRangeClause(1)}
+         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
+     ),
+     pedido_detalle AS (
+       SELECT pf.id,
+              pf.total,
+               COALESCE(SUM(${SAFE_ITEM_QTY_SQL}) FILTER (WHERE item IS NOT NULL), 0)::numeric AS unidades,
+               COALESCE(SUM((${SAFE_ITEM_PRICE_SQL} - ${ITEM_COST_SQL}) * ${SAFE_ITEM_QTY_SQL}) FILTER (WHERE item IS NOT NULL), 0)::numeric AS utilidad
+       FROM pedidos_filtrados pf
+        LEFT JOIN LATERAL jsonb_array_elements(pf.items) AS item ON TRUE
+       LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}
+       GROUP BY pf.id, pf.total
      )
-      SELECT COALESCE(SUM((${SAFE_ITEM_PRICE_SQL} - COALESCE(pr.costo, 0)) * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS utilidad
-     FROM pedidos_mes pm
-     CROSS JOIN LATERAL jsonb_array_elements(pm.items) AS item
-      LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}`,
-    [monthStartOrder, todayOrder]
+     SELECT COALESCE(SUM(total), 0)::numeric AS ventas,
+            COUNT(*)::int AS pedidos,
+            COALESCE(SUM(unidades), 0)::numeric AS unidades,
+            COALESCE(SUM(utilidad), 0)::numeric AS utilidad
+     FROM pedido_detalle`,
+    [desde, hasta]
   );
 
-  const ventasHoy = toAmount(ventasHoyResult.rows[0]?.total);
-  const pedidosHoy = toInt(ventasHoyResult.rows[0]?.pedidos);
-  const ventasSemana = toAmount(ventasSemanaResult.rows[0]?.total);
-  const ventasMes = toAmount(ventasMesResult.rows[0]?.total);
-  const pedidosMes = toInt(ventasMesResult.rows[0]?.pedidos);
-  const gastosHoy = toAmount(gastosHoyResult.rows[0]?.total);
-  const gastosMes = toAmount(gastosMesResult.rows[0]?.total);
-  const utilidadEstimada = toAmount(utilidadMesResult.rows[0]?.utilidad);
-  const ticketPromedio = pedidosMes > 0 ? toAmount(ventasMes / pedidosMes) : 0;
-
   return {
-    ventas_hoy: ventasHoy,
-    ventas_semana: ventasSemana,
-    ventas_mes: ventasMes,
-    ingresos_mes: ventasMes,
-    pedidos_hoy: pedidosHoy,
-    pedidos_mes: pedidosMes,
-    gastos_hoy: gastosHoy,
-    gastos_mes: gastosMes,
-    ticket_promedio: ticketPromedio,
-    utilidad_estimada: utilidadEstimada,
+    ventas: toAmount(result.rows[0]?.ventas),
+    pedidos: toInt(result.rows[0]?.pedidos),
+    unidades: toAmount(result.rows[0]?.unidades),
+    utilidad: toAmount(result.rows[0]?.utilidad),
   };
 }
 
-async function getProductosTop(query) {
-  const { desde, hasta } = resolveRange(query);
-  const limitValue = Math.min(50, Math.max(1, Math.trunc(Number(query?.get?.('limit') || 10) || 10)));
-  const orderRange = orderRangeFromIso(desde, hasta);
+async function getExpenseMetrics(desde, hasta) {
+  const result = await pool.query(
+    `SELECT COALESCE(SUM(valor), 0)::numeric AS gastos,
+            COUNT(*)::int AS registros
+     FROM gastos
+     WHERE fecha BETWEEN $1::date AND $2::date`,
+    [desde, hasta]
+  );
+
+  return {
+    gastos: toAmount(result.rows[0]?.gastos),
+    registros: toInt(result.rows[0]?.registros),
+  };
+}
+
+async function getProductPerformance(desde, hasta) {
   const result = await pool.query(
     `WITH pedidos_filtrados AS (
        SELECT items
        FROM pedidos
        WHERE fecha ~ '^[0-9]{2}/[0-9]{2}/[0-9]{4}$'
-         AND ${buildOrderRangeClause(1)}
+         AND to_date(fecha, 'DD/MM/YYYY') BETWEEN $1::date AND $2::date
      )
-     SELECT COALESCE(pr.nombre, item->>'nombre') AS producto,
+     SELECT COALESCE(pr.id::text, NULLIF(item->>'nombre', ''), NULLIF(item->>'id', ''), 'Sin nombre') AS producto_key,
+            COALESCE(pr.nombre, item->>'nombre', item->>'id', 'Sin nombre') AS producto,
+            COALESCE(c.nombre, 'Sin categoría') AS categoria,
+             MAX(COALESCE(pr.precio, ${SAFE_ITEM_PRICE_SQL}))::numeric AS precio,
+             COALESCE(SUM(${ITEM_COST_SQL} * ${SAFE_ITEM_QTY_SQL}) / NULLIF(SUM(${SAFE_ITEM_QTY_SQL}), 0), 0)::numeric AS costo,
+            COALESCE(pr.activo, TRUE) AS activo,
             SUM(${SAFE_ITEM_QTY_SQL})::numeric AS cantidad_vendida,
             COALESCE(SUM(${SAFE_ITEM_PRICE_SQL} * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS ingresos,
-            COALESCE(SUM((${SAFE_ITEM_PRICE_SQL} - COALESCE(pr.costo, 0)) * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS utilidad
+             COALESCE(SUM((${SAFE_ITEM_PRICE_SQL} - ${ITEM_COST_SQL}) * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS utilidad
      FROM pedidos_filtrados pf
      CROSS JOIN LATERAL jsonb_array_elements(pf.items) AS item
-      LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}
-      GROUP BY COALESCE(pr.id, ${SAFE_ITEM_ID_SQL}), COALESCE(pr.nombre, item->>'nombre')
-      ORDER BY cantidad_vendida DESC, ingresos DESC, producto ASC
-      LIMIT $3`,
-    [orderRange.desde, orderRange.hasta, limitValue]
+     LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}
+     LEFT JOIN categorias c ON c.id = pr.categoria_id
+      GROUP BY producto_key, producto, categoria, activo
+     ORDER BY cantidad_vendida DESC, utilidad DESC, ingresos DESC, producto ASC`,
+    [desde, hasta]
   );
 
   return result.rows.map((row) => ({
     producto: row.producto,
-    cantidad_vendida: toInt(row.cantidad_vendida),
+    categoria: row.categoria,
+    precio: toAmount(row.precio),
+    costo: toAmount(row.costo),
+    activo: Boolean(row.activo),
+    cantidad_vendida: toAmount(row.cantidad_vendida),
     ingresos: toAmount(row.ingresos),
     utilidad: toAmount(row.utilidad),
   }));
 }
 
-async function getVentasDiarias(query) {
-  const { desde, hasta } = resolveRange(query);
+async function getDashboardResumen(query = null) {
+  const range = resolveRange(query, { defaultPreset: 'mes' });
+  const now = businessDate();
+  const today = formatIsoDate(now);
+  const weekStart = formatIsoDate(shiftDays(now, -((now.getDay() + 6) % 7)));
+  const monthStart = formatIsoDate(startOfMonth(now));
+
+  // Reutilizar promesas solo dentro de esta solicitud, sin servir resultados obsoletos.
+  const pending = new Map();
+  const metrics = (type, from, to) => {
+    const key = `${type}:${from}:${to}`;
+    if (!pending.has(key)) pending.set(key, type === 'orders' ? getOrderMetrics(from, to) : getExpenseMetrics(from, to));
+    return pending.get(key);
+  };
+  const [dayMetrics, weekMetrics, monthMetrics, rangeMetrics, dayExpenses, weekExpenses, monthExpenses, rangeExpenses] = await Promise.all([
+    metrics('orders', today, today),
+    metrics('orders', weekStart, today),
+    metrics('orders', monthStart, today),
+    metrics('orders', range.desde, range.hasta),
+    metrics('expenses', today, today),
+    metrics('expenses', weekStart, today),
+    metrics('expenses', monthStart, today),
+    metrics('expenses', range.desde, range.hasta),
+  ]);
+
+  const ticketPromedio = monthMetrics.pedidos > 0 ? toAmount(monthMetrics.ventas / monthMetrics.pedidos) : 0;
+  const ticketPromedioRango = rangeMetrics.pedidos > 0 ? toAmount(rangeMetrics.ventas / rangeMetrics.pedidos) : 0;
+  const productosPromedioRango = rangeMetrics.pedidos > 0 ? toAmount(rangeMetrics.unidades / rangeMetrics.pedidos) : 0;
+  const pedidosPorDiaRango = range.dias > 0 ? toAmount(rangeMetrics.pedidos / range.dias) : 0;
+
+  return {
+    rango: {
+      desde: range.desde,
+      hasta: range.hasta,
+      preset: range.preset,
+      dias: range.dias,
+      label: buildRangeLabel(range),
+    },
+    ventas_hoy: dayMetrics.ventas,
+    ventas_semana: weekMetrics.ventas,
+    ventas_mes: monthMetrics.ventas,
+    ingresos_mes: monthMetrics.ventas,
+    ventas_rango: rangeMetrics.ventas,
+    pedidos_hoy: dayMetrics.pedidos,
+    pedidos_mes: monthMetrics.pedidos,
+    pedidos_rango: rangeMetrics.pedidos,
+    gastos_hoy: dayExpenses.gastos,
+    gastos_semana: weekExpenses.gastos,
+    gastos_mes: monthExpenses.gastos,
+    gastos_rango: rangeExpenses.gastos,
+    utilidad_hoy: dayMetrics.utilidad,
+    utilidad_semana: weekMetrics.utilidad,
+    utilidad_mes: monthMetrics.utilidad,
+    utilidad_estimada: monthMetrics.utilidad,
+    utilidad_rango: rangeMetrics.utilidad,
+    ticket_promedio: ticketPromedio,
+    ticket_promedio_rango: ticketPromedioRango,
+    productos_rango: rangeMetrics.unidades,
+    productos_promedio_rango: productosPromedioRango,
+    productos_promedio_pedido: productosPromedioRango,
+    pedidos_por_dia_rango: pedidosPorDiaRango,
+  };
+}
+
+async function getProductosTop(query = null) {
+  const limitValue = Math.min(50, Math.max(1, Math.trunc(Number(query?.get?.('limit') || 10) || 10)));
+  const range = resolveRange(query, { defaultPreset: 'mes' });
+  const performance = await getProductPerformance(range.desde, range.hasta);
+
+  return performance
+    .slice(0, limitValue)
+    .map((row) => ({
+      producto: row.producto,
+      cantidad_vendida: toInt(row.cantidad_vendida),
+      ingresos: toAmount(row.ingresos),
+      utilidad: toAmount(row.utilidad),
+      categoria: row.categoria,
+      precio: toAmount(row.precio),
+      costo: toAmount(row.costo),
+    }));
+}
+
+async function getProductosRanking(query = null) {
+  const range = resolveRange(query, { defaultPreset: 'mes' });
+  const limitValue = Math.min(20, Math.max(1, Math.trunc(Number(query?.get?.('limit') || 10) || 10)));
+  const performance = await getProductPerformance(range.desde, range.hasta);
+
+  const topVendidos = [...performance]
+    .sort((a, b) => b.cantidad_vendida - a.cantidad_vendida || b.ingresos - a.ingresos || a.producto.localeCompare(b.producto, 'es'))
+    .slice(0, limitValue);
+
+  const topRentables = [...performance]
+    .sort((a, b) => b.utilidad - a.utilidad || b.cantidad_vendida - a.cantidad_vendida || a.producto.localeCompare(b.producto, 'es'))
+    .slice(0, limitValue);
+
+  const menosVendidos = [...performance]
+    .filter((row) => row.cantidad_vendida > 0)
+    .sort((a, b) => a.cantidad_vendida - b.cantidad_vendida || a.utilidad - b.utilidad || a.producto.localeCompare(b.producto, 'es'))
+    .slice(0, limitValue);
+
+  return {
+    rango: {
+      desde: range.desde,
+      hasta: range.hasta,
+      preset: range.preset,
+      dias: range.dias,
+      label: buildRangeLabel(range),
+    },
+    top_vendidos: topVendidos.map((row) => ({
+      producto: row.producto,
+      categoria: row.categoria,
+      precio: toAmount(row.precio),
+      costo: toAmount(row.costo),
+      cantidad_vendida: toInt(row.cantidad_vendida),
+      ingresos: toAmount(row.ingresos),
+      utilidad: toAmount(row.utilidad),
+    })),
+    top_rentables: topRentables.map((row) => ({
+      producto: row.producto,
+      categoria: row.categoria,
+      precio: toAmount(row.precio),
+      costo: toAmount(row.costo),
+      cantidad_vendida: toInt(row.cantidad_vendida),
+      ingresos: toAmount(row.ingresos),
+      utilidad: toAmount(row.utilidad),
+    })),
+    menos_vendidos: menosVendidos.map((row) => ({
+      producto: row.producto,
+      categoria: row.categoria,
+      precio: toAmount(row.precio),
+      costo: toAmount(row.costo),
+      cantidad_vendida: toInt(row.cantidad_vendida),
+      ingresos: toAmount(row.ingresos),
+      utilidad: toAmount(row.utilidad),
+    })),
+    reporte: performance.map((row) => ({
+      producto: row.producto,
+      categoria: row.categoria,
+      precio: toAmount(row.precio),
+      costo: toAmount(row.costo),
+      cantidad_vendida: toInt(row.cantidad_vendida),
+      ingresos: toAmount(row.ingresos),
+      utilidad: toAmount(row.utilidad),
+    })),
+  };
+}
+
+async function getVentasDiarias(query = null) {
+  const range = resolveRange(query, { defaultPreset: 'mes' });
   const result = await pool.query(
     `WITH serie AS (
        SELECT generate_series($1::date, $2::date, interval '1 day')::date AS fecha
@@ -205,7 +271,7 @@ async function getVentasDiarias(query) {
      LEFT JOIN pedidos_filtrados ON pedidos_filtrados.fecha_dt = serie.fecha
      GROUP BY serie.fecha
      ORDER BY serie.fecha`,
-    [desde, hasta]
+    [range.desde, range.hasta]
   );
 
   return result.rows.map((row) => ({
@@ -215,8 +281,8 @@ async function getVentasDiarias(query) {
   }));
 }
 
-async function getCategoriasDashboard(query) {
-  const { desde, hasta } = resolveRange(query);
+async function getCategoriasDashboard(query = null) {
+  const range = resolveRange(query, { defaultPreset: 'mes' });
   const result = await pool.query(
     `WITH pedidos_filtrados AS (
        SELECT items
@@ -228,11 +294,11 @@ async function getCategoriasDashboard(query) {
             COALESCE(SUM(${SAFE_ITEM_PRICE_SQL} * ${SAFE_ITEM_QTY_SQL}), 0)::numeric AS ingresos
      FROM pedidos_filtrados pf
      CROSS JOIN LATERAL jsonb_array_elements(pf.items) AS item
-      LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}
-      LEFT JOIN categorias c ON c.id = pr.categoria_id
-      GROUP BY COALESCE(c.id, 0), COALESCE(c.nombre, 'Sin categoría')
-      ORDER BY ingresos DESC, categoria ASC`,
-    [desde, hasta]
+     LEFT JOIN productos pr ON pr.id = ${SAFE_ITEM_ID_SQL}
+     LEFT JOIN categorias c ON c.id = pr.categoria_id
+     GROUP BY COALESCE(c.id, 0), COALESCE(c.nombre, 'Sin categoría')
+     ORDER BY ingresos DESC, categoria ASC`,
+    [range.desde, range.hasta]
   );
 
   return result.rows.map((row) => ({
@@ -244,6 +310,7 @@ async function getCategoriasDashboard(query) {
 module.exports = {
   getCategoriasDashboard,
   getDashboardResumen,
+  getProductosRanking,
   getProductosTop,
   getVentasDiarias,
 };

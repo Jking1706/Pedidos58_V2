@@ -1,4 +1,5 @@
 const { pool } = require('../database/connection');
+const { formatOrderDate, parseIsoDate, resolveRange, isoToOrderDate } = require('./reporting.utils');
 
 const PEDIDO_COLUMNS = `
   id,
@@ -18,8 +19,7 @@ const PEDIDO_COLUMNS = `
 `;
 
 function hoy() {
-  const now = new Date();
-  return `${String(now.getDate()).padStart(2, '0')}/${String(now.getMonth() + 1).padStart(2, '0')}/${now.getFullYear()}`;
+  return formatOrderDate();
 }
 
 function toInt(value) {
@@ -58,9 +58,13 @@ function parseItems(value) {
 }
 
 function calcularSubtotal(items) {
-  return parseItems(items).reduce((total, item) => {
-    return total + toInt(item.precio) * toInt(item.qty || 1);
+  const total = parseItems(items).reduce((total, item) => {
+    return total + Number(item.precio) * Number(item.qty ?? 1);
   }, 0);
+  if (!Number.isSafeInteger(total) || total < 0 || total > 2147483647) {
+    throw Object.assign(new Error('El total del pedido está fuera del rango permitido'), { statusCode: 400 });
+  }
+  return total;
 }
 
 function normalizarPedido(row) {
@@ -98,6 +102,14 @@ async function listarPedidos(fecha = hoy()) {
 }
 
 async function listarPedidosRango(desde = hoy(), hasta = hoy()) {
+  const toIso = (value) => {
+    const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(String(value));
+    if (!match) throw Object.assign(new Error('La fecha debe tener formato DD/MM/YYYY'), { statusCode: 400 });
+    return parseIsoDate(`${match[3]}-${match[2]}-${match[1]}`, undefined, 'La fecha');
+  };
+  const range = resolveRange({ desde: toIso(desde), hasta: toIso(hasta) });
+  desde = isoToOrderDate(range.desde);
+  hasta = isoToOrderDate(range.hasta);
   const result = await pool.query(
     `SELECT ${PEDIDO_COLUMNS}
      FROM pedidos
@@ -112,18 +124,15 @@ async function listarPedidosRango(desde = hoy(), hasta = hoy()) {
 
 async function obtenerResumen(fecha = hoy()) {
   const total = await pool.query(
-    'SELECT COUNT(*)::int AS total_pedidos, COALESCE(SUM(total), 0)::int AS ventas FROM pedidos WHERE fecha = $1',
-    [fecha]
-  );
-  const entregados = await pool.query(
-    'SELECT COUNT(*)::int AS entregados FROM pedidos WHERE fecha = $1 AND entregado = TRUE',
+    'SELECT COUNT(*)::int AS total_pedidos, COALESCE(SUM(total), 0)::bigint AS ventas, COUNT(*) FILTER (WHERE entregado = TRUE)::int AS entregados FROM pedidos WHERE fecha = $1',
     [fecha]
   );
 
   return {
     fecha,
     ...total.rows[0],
-    entregados: entregados.rows[0]?.entregados ?? 0,
+    ventas: Number(total.rows[0]?.ventas || 0),
+    entregados: total.rows[0]?.entregados ?? 0,
   };
 }
 
@@ -155,10 +164,21 @@ function buildPedidoPayload(data, existing = null) {
     : (data.total !== undefined ? toInt(data.total) : calcularSubtotal(items));
   const total = data.total !== undefined ? toInt(data.total) : subtotal;
   const fecha = String(data.fecha || existing?.fecha || hoy()).trim() || hoy();
+  const fechaParts = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(fecha);
+  if (!fechaParts) throw Object.assign(new Error('La fecha debe tener formato DD/MM/YYYY'), { statusCode: 400 });
+  parseIsoDate(`${fechaParts[3]}-${fechaParts[2]}-${fechaParts[1]}`, undefined, 'La fecha');
+  for (const amount of [data.total, data.subtotal]) {
+    if (amount !== undefined && (!Number.isFinite(Number(amount)) || Number(amount) < 0)) {
+      throw Object.assign(new Error('Los importes deben ser números mayores o iguales a cero'), { statusCode: 400 });
+    }
+  }
   const hora = String(data.hora || existing?.hora || '').trim();
 
   if (!items.length) {
     throw Object.assign(new Error('El pedido debe tener al menos un item'), { statusCode: 400 });
+  }
+  if (items.some((item) => !item || typeof item !== 'object' || Array.isArray(item))) {
+    throw Object.assign(new Error('Los productos del pedido deben ser objetos válidos'), { statusCode: 400 });
   }
 
   if (!hora) {
@@ -191,8 +211,30 @@ function buildPedidoPayload(data, existing = null) {
   };
 }
 
+async function snapshotItemCosts(items, previous = []) {
+  const key = (item) => String(item.id ?? item.nombre ?? '');
+  const previousCosts = new Map(previous.map((item) => [key(item), item.costo_unitario]));
+  const ids = [...new Set(items.map((item) => Number(item.id)).filter((id) => Number.isSafeInteger(id) && id > 0 && id <= 2147483647))];
+  const catalog = ids.length ? await pool.query('SELECT id, costo FROM productos WHERE id = ANY($1::int[])', [ids]) : { rows: [] };
+  const costs = new Map(catalog.rows.map((row) => [Number(row.id), Number(row.costo)]));
+  return items.map((item) => {
+    const qty = Number(item.qty ?? 1);
+    const precio = Number(item.precio);
+    if (!Number.isSafeInteger(qty) || qty <= 0 || !Number.isSafeInteger(precio) || precio < 0) {
+      throw Object.assign(new Error('Cada producto necesita cantidad positiva y precio válido'), { statusCode: 400 });
+    }
+    const previousCost = previousCosts.get(key(item));
+    const cost = previousCost !== undefined && previousCost !== null && Number.isFinite(Number(previousCost))
+      ? Number(previousCost) : costs.get(Number(item.id)) ?? 0;
+    return { ...item, qty, precio, costo_unitario: cost };
+  });
+}
+
 async function crearPedido(data) {
   const payload = buildPedidoPayload(data);
+  payload.items = await snapshotItemCosts(payload.items);
+  payload.subtotal = calcularSubtotal(payload.items);
+  payload.total = payload.subtotal;
   const result = await pool.query(
     `INSERT INTO pedidos (
       numero,
@@ -237,6 +279,9 @@ async function actualizarPedido(id, data) {
   }
 
   const payload = buildPedidoPayload(data, actual);
+  payload.items = await snapshotItemCosts(payload.items, actual.items);
+  payload.subtotal = calcularSubtotal(payload.items);
+  payload.total = payload.subtotal;
   const touchedFields = [
     'numero',
     'cliente',

@@ -4,6 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Sabor +58 - Gastos</title>
+  <script src="/report-tools.js"></script>
   <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Nunito:wght@400;600;700;800&display=swap" rel="stylesheet" />
   <style>
     :root {
@@ -43,6 +44,19 @@
     .hero-copy h1 { font-family: 'Bebas Neue', sans-serif; font-size: clamp(2.1rem, 4vw, 3.5rem); letter-spacing: 1px; color: var(--negro); line-height: 0.95; }
     .hero-copy p { margin-top: 8px; color: rgba(27, 27, 27, 0.72); max-width: 68ch; line-height: 1.5; }
     .hero-actions { display: flex; gap: 10px; flex-wrap: wrap; }
+
+    .preset-row { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
+    .preset-chip {
+      border: 1px solid rgba(0, 48, 135, 0.14);
+      background: #f5f8ff;
+      color: #18346b;
+      border-radius: 999px;
+      padding: 8px 12px;
+      font-weight: 800;
+      font-size: 0.84rem;
+      cursor: pointer;
+    }
+    .preset-chip.active { background: var(--azul); color: white; border-color: var(--azul); }
 
     .summary-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 18px; }
     .summary-card, .panel, .table-panel { background: white; border: var(--borde); border-radius: 18px; box-shadow: var(--sombra); }
@@ -92,6 +106,35 @@
     .status.ok { color: #15803d; }
     .status.error { color: #b91c1c; }
 
+    .skeleton-line {
+      display: block;
+      height: 14px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, rgba(218, 218, 218, 0.45) 25%, rgba(245, 245, 245, 0.95) 37%, rgba(218, 218, 218, 0.45) 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+
+    .skeleton-line.w-60 { width: 60%; }
+    .skeleton-line.w-75 { width: 75%; }
+    .skeleton-line.w-90 { width: 90%; }
+
+    @keyframes shimmer {
+      0% { background-position: 100% 0; }
+      100% { background-position: 0 0; }
+    }
+
+    body.loading .summary-value { color: transparent; }
+    body.loading .summary-value::before {
+      content: '';
+      display: block;
+      min-height: 32px;
+      border-radius: 10px;
+      background: linear-gradient(90deg, rgba(218, 218, 218, 0.45) 25%, rgba(245, 245, 245, 0.95) 37%, rgba(218, 218, 218, 0.45) 63%);
+      background-size: 400% 100%;
+      animation: shimmer 1.2s ease-in-out infinite;
+    }
+
     @media (max-width: 1100px) {
       .layout { grid-template-columns: 1fr; }
       .summary-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
@@ -117,6 +160,7 @@
       <div class="top-actions">
         <a class="btn-link" href="/admin">Pedidos</a>
         <a class="btn-link" href="/admin-dashboard">Dashboard</a>
+        <a class="btn-link" href="/admin-caja">Caja</a>
         <a class="btn-link" href="/admin-productos">Productos</a>
         <a class="btn-link" href="/admin-categorias">Categorías</a>
         <a class="btn-link" href="/">Menú</a>
@@ -133,6 +177,7 @@
       <div class="hero-actions">
         <button class="btn-secondary" id="reload-btn" type="button">Actualizar</button>
         <button class="btn" id="new-btn" type="button">Nuevo gasto</button>
+        <button class="btn" id="export-btn" type="button">Exportar Excel</button>
       </div>
     </section>
 
@@ -198,6 +243,15 @@
             <p class="muted">Filtra por fecha inicial, fecha final y categoría.</p>
           </div>
 
+          <div class="preset-row" id="preset-row">
+            <button class="preset-chip active" type="button" data-preset="hoy">Hoy</button>
+            <button class="preset-chip" type="button" data-preset="ayer">Ayer</button>
+            <button class="preset-chip" type="button" data-preset="semana">Esta semana</button>
+            <button class="preset-chip" type="button" data-preset="mes">Este mes</button>
+            <button class="preset-chip" type="button" data-preset="30dias">Últimos 30 días</button>
+            <button class="preset-chip" type="button" data-preset="personalizado">Personalizado</button>
+          </div>
+
           <div class="filters">
             <input id="filter-desde" type="date" />
             <input id="filter-hasta" type="date" />
@@ -258,6 +312,7 @@
     const statusEl = document.getElementById('status');
     const reloadBtn = document.getElementById('reload-btn');
     const newBtn = document.getElementById('new-btn');
+    const exportBtn = document.getElementById('export-btn');
     const saveBtn = document.getElementById('save-btn');
     const resetBtn = document.getElementById('reset-btn');
     const deleteEditBtn = document.getElementById('delete-edit-btn');
@@ -286,19 +341,78 @@
       pagesCount: document.getElementById('pages-count'),
     };
     const datalist = document.getElementById('gasto-categories');
+    const presetButtons = Array.from(document.querySelectorAll('[data-preset]'));
 
     let expenses = [];
     let editingId = null;
     let currentPage = 1;
     let pagination = { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
     let summary = { totalValor: 0, totalRegistros: 0 };
+    let currentPreset = 'mes';
 
     function setToday(value = new Date()) {
-      return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-${String(value.getDate()).padStart(2, '0')}`;
+      return ReportTools.today(value);
     }
 
     function firstDayOfMonth(value = new Date()) {
       return `${value.getFullYear()}-${String(value.getMonth() + 1).padStart(2, '0')}-01`;
+    }
+
+    function shiftDays(date, days) {
+      return new Date(date.getFullYear(), date.getMonth(), date.getDate() + days);
+    }
+
+    function resolvePresetRange(preset) {
+      const range = ReportTools.preset(preset);
+      return { desde: range.from, hasta: range.to };
+    }
+
+    function updatePresetButtons() {
+      presetButtons.forEach((button) => {
+        button.classList.toggle('active', button.dataset.preset === currentPreset);
+      });
+    }
+
+    function setPreset(preset, shouldLoad = true) {
+      currentPreset = preset;
+      const range = preset === 'personalizado' ? { desde: filters.desde.value || setToday(), hasta: filters.hasta.value || setToday() } : resolvePresetRange(preset);
+      filters.desde.value = range.desde;
+      filters.hasta.value = range.hasta;
+      updatePresetButtons();
+      if (shouldLoad) {
+        currentPage = 1;
+        void loadExpenses(1);
+      }
+    }
+
+    function buildFiltersQuery(page = currentPage, exportMode = false) {
+      const range = ReportTools.range(filters.desde.value, filters.hasta.value);
+      filters.desde.value = range.from;
+      filters.hasta.value = range.to;
+      const params = new URLSearchParams();
+      params.set('page', String(page || 1));
+      params.set('limit', String(PAGE_SIZE));
+      params.set('preset', currentPreset);
+      params.set('desde', filters.desde.value.trim());
+      params.set('hasta', filters.hasta.value.trim());
+
+      const categoria = filters.categoria.value.trim();
+      if (categoria) params.set('categoria', categoria);
+      if (exportMode) params.set('export', '1');
+
+      return params.toString();
+    }
+
+    function renderLoadingExpenses() {
+      expensesBody.innerHTML = Array.from({ length: 8 }).map(() => `
+        <tr>
+          <td><span class="skeleton-line w-75"></span></td>
+          <td><span class="skeleton-line w-90"></span></td>
+          <td><span class="skeleton-line w-90"></span></td>
+          <td><span class="skeleton-line w-60"></span></td>
+          <td><span class="skeleton-line w-75"></span></td>
+          <td><span class="skeleton-line w-60"></span></td>
+        </tr>`).join('');
     }
 
     function money(value) {
@@ -448,21 +562,11 @@
 
     async function loadExpenses(page = currentPage) {
       setStatus('Cargando gastos...', 'ok');
-
-      const params = new URLSearchParams();
-      params.set('page', String(page || 1));
-      params.set('limit', String(PAGE_SIZE));
-
-      const desde = filters.desde.value.trim();
-      const hasta = filters.hasta.value.trim();
-      const categoria = filters.categoria.value.trim();
-
-      if (desde) params.set('desde', desde);
-      if (hasta) params.set('hasta', hasta);
-      if (categoria) params.set('categoria', categoria);
+      document.body.classList.add('loading');
+      renderLoadingExpenses();
 
       try {
-        const data = await apiJson(`${API}/gastos?${params.toString()}`, { method: 'GET' });
+        const data = await apiJson(`${API}/gastos?${buildFiltersQuery(page)}`, { method: 'GET' });
         expenses = Array.isArray(data.items) ? data.items.map(normalizeExpense) : [];
         pagination = data.pagination || { page: 1, limit: PAGE_SIZE, total: 0, totalPages: 1 };
         summary = data.summary || { totalValor: 0, totalRegistros: 0 };
@@ -480,6 +584,43 @@
             </td>
           </tr>`;
         setStatus(error.message, 'error');
+      } finally {
+        document.body.classList.remove('loading');
+      }
+    }
+
+    async function exportExpensesExcel() {
+      exportBtn.disabled = true;
+      try {
+        const query = buildFiltersQuery(1, true);
+        const filename = `gastos-${filters.desde.value.replace(/-/g, '')}_${filters.hasta.value.replace(/-/g, '')}.xlsx`;
+        setStatus('Generando Excel...', 'ok');
+        const data = await apiJson(`${API}/gastos/export?${query}`, { method: 'GET' });
+        await ReportTools.load('excel');
+        const items = Array.isArray(data.items) ? data.items : [];
+
+        if (!items.length) {
+          throw new Error('No hay gastos para exportar');
+        }
+
+        const rows = items.map((item) => ({
+          Fecha: formatDate(item.fecha),
+          Categoría: item.categoria,
+          Descripción: item.descripcion,
+          Valor: Number(item.valor) || 0,
+          Observaciones: item.observaciones || '',
+        }));
+
+        const wb = XLSX.utils.book_new();
+        const ws = XLSX.utils.json_to_sheet(rows);
+        ws['!cols'] = [{ wch: 14 }, { wch: 18 }, { wch: 38 }, { wch: 14 }, { wch: 34 }];
+        XLSX.utils.book_append_sheet(wb, ws, 'Gastos');
+        XLSX.writeFile(wb, filename);
+        setStatus('Excel generado', 'ok');
+      } catch (error) {
+        setStatus(error.message, 'error');
+      } finally {
+        exportBtn.disabled = false;
       }
     }
 
@@ -542,18 +683,23 @@
     });
 
     function setDefaultFilters() {
-      const now = new Date();
-      filters.desde.value = firstDayOfMonth(now);
-      filters.hasta.value = setToday(now);
+      currentPreset = 'mes';
+      const range = resolvePresetRange('mes');
+      filters.desde.value = range.desde;
+      filters.hasta.value = range.hasta;
       filters.categoria.value = '';
+      updatePresetButtons();
     }
 
     function applyFilters() {
+      currentPreset = 'personalizado';
+      updatePresetButtons();
       currentPage = 1;
       void loadExpenses(1);
     }
 
     reloadBtn.addEventListener('click', () => void loadExpenses(currentPage));
+    exportBtn.addEventListener('click', () => void exportExpensesExcel());
     newBtn.addEventListener('click', resetForm);
     resetBtn.addEventListener('click', resetForm);
     deleteEditBtn.addEventListener('click', () => {
@@ -561,6 +707,11 @@
       void deleteExpense(editingId);
     });
     document.getElementById('expense-form').addEventListener('submit', (event) => void saveExpense(event));
+    presetButtons.forEach((button) => {
+      button.addEventListener('click', () => {
+        setPreset(button.dataset.preset, true);
+      });
+    });
     filters.desde.addEventListener('change', applyFilters);
     filters.hasta.addEventListener('change', applyFilters);
     filters.categoria.addEventListener('change', applyFilters);

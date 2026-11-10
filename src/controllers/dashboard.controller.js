@@ -1,12 +1,13 @@
 const {
   getCategoriasDashboard,
   getDashboardResumen,
+  getProductosRanking,
   getProductosTop,
   getVentasDiarias,
 } = require('../services/dashboard.service');
 
-async function getResumenDashboard() {
-  const resumen = await getDashboardResumen();
+async function getResumenDashboard(query) {
+  const resumen = await getDashboardResumen(query);
 
   return {
     statusCode: 200,
@@ -20,6 +21,15 @@ async function getProductosTopDashboard(query) {
   return {
     statusCode: 200,
     payload: productos,
+  };
+}
+
+async function getProductosRankingDashboard(query) {
+  const ranking = await getProductosRanking(query);
+
+  return {
+    statusCode: 200,
+    payload: ranking,
   };
 }
 
@@ -43,6 +53,7 @@ async function getCategoriasDashboardData(query) {
 
 module.exports = {
   getCategoriasDashboardData,
+  getProductosRankingDashboard,
   getProductosTopDashboard,
   getResumenDashboard,
   getVentasDiariasDashboard,

@@ -15,6 +15,22 @@ async function getGastos(query) {
   const gastos = await listGastos({
     page: parsePositiveInt(query.get('page'), 1),
     limit: parsePositiveInt(query.get('limit'), 10),
+    preset: query.get('preset') || undefined,
+    desde: query.get('desde') || undefined,
+    hasta: query.get('hasta') || undefined,
+    categoria: query.get('categoria') || undefined,
+  });
+
+  return {
+    statusCode: 200,
+    payload: gastos,
+  };
+}
+
+async function getGastosExport(query) {
+  const gastos = await listGastos({
+    export: true,
+    preset: query.get('preset') || undefined,
     desde: query.get('desde') || undefined,
     hasta: query.get('hasta') || undefined,
     categoria: query.get('categoria') || undefined,
@@ -70,6 +86,7 @@ module.exports = {
   deleteGasto,
   getGasto,
   getGastos,
+  getGastosExport,
   postGasto,
   putGasto,
 };
