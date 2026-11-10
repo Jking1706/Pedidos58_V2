@@ -20,7 +20,7 @@ async function handleApiRoute(context) {
     const result = await dispatch(context);
     return result;
   } catch (error) {
-    return errorResult(error);
+    return errorResult(error, { method: context.method, pathname: context.pathname });
   }
 }
 

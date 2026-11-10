@@ -192,3 +192,59 @@ test('proxyGoogleSheets con falla de red responde 502', async () => {
   global.fetch = originalFetch;
   delete process.env.GOOGLE_SHEETS_WEBAPP_URL;
 });
+
+test('http_error: errorResult emite log estructurado y oculta internos del 500', () => {
+  const { errorResult } = require('../src/utils/http');
+  const logs = [];
+  const originalLog = console.log;
+  console.log = (...args) => logs.push(args);
+  try {
+    const serverError = Object.assign(new Error('timeout de postgres'), { code: 'ETIMEDOUT' });
+    const res500 = errorResult(serverError, { method: 'post', pathname: '/api/fallo' });
+    const entry5xx = JSON.parse(logs[0][0]);
+    assert.equal(res500.statusCode, 500);
+    assert.equal(res500.payload.error, 'Error interno del servidor');
+    assert.equal(entry5xx.event, 'http_error');
+    assert.equal(entry5xx.level, 'error');
+    assert.equal(entry5xx.statusCode, 500);
+    assert.equal(entry5xx.errorCode, 'ETIMEDOUT');
+    assert.equal(entry5xx.method, 'POST');
+    assert.equal(entry5xx.pathname, '/api/fallo');
+    assert.ok(entry5xx.stack && entry5xx.stack.includes('timeout de postgres'));
+
+    const clientError = Object.assign(new Error('El valor es inválido'), { statusCode: 400 });
+    const res400 = errorResult(clientError, { method: 'GET', pathname: '/api/x' });
+    const entry4xx = JSON.parse(logs[1][0]);
+    assert.equal(res400.statusCode, 400);
+    assert.equal(res400.payload.error, 'El valor es inválido');
+    assert.equal(entry4xx.level, 'warn');
+    assert.equal(entry4xx.stack, undefined);
+  } finally {
+    console.log = originalLog;
+  }
+});
+
+test('http_error: handleError responde con contrato y registra log', () => {
+  const { handleError } = require('../src/middleware/error.middleware');
+  const logs = [];
+  const originalLog = console.log;
+  const body = [];
+  console.log = (...args) => logs.push(args);
+  try {
+    const res = {
+      statusCode: 0,
+      writeHead(code) { this.statusCode = code; },
+      setHeader() {},
+      end(chunk) { body.push(chunk); },
+    };
+    handleError(res, Object.assign(new Error('boom'), { statusCode: 400 }), { method: 'post', pathname: '/api/pedido' });
+    assert.equal(res.statusCode, 400);
+    assert.deepEqual(JSON.parse(body.join('')), { error: 'boom' });
+    const entry = JSON.parse(logs[0][0]);
+    assert.equal(entry.event, 'http_error');
+    assert.equal(entry.method, 'POST');
+    assert.equal(entry.pathname, '/api/pedido');
+  } finally {
+    console.log = originalLog;
+  }
+});

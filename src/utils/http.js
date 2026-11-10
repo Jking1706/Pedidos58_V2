@@ -68,10 +68,23 @@ function readJsonBody(req) {
   });
 }
 
-function errorResult(error) {
+function errorResult(error, context = {}) {
   const code = Number(error.statusCode);
   const statusCode = Number.isInteger(code) && code >= 400 && code < 500 ? code : 500;
-  if (statusCode === 500) console.error('[API] Error interno', { name: error.name, code: error.code });
+  const level = statusCode === 500 ? 'error' : 'warn';
+  const entry = {
+    level,
+    event: 'http_error',
+    statusCode,
+    errorName: error.name,
+    errorCode: error.code,
+    errorMessage: error.message,
+    method: context.method ? String(context.method).toUpperCase() : undefined,
+    pathname: context.pathname ? String(context.pathname) : undefined,
+    timestamp: new Date().toISOString(),
+  };
+  if (statusCode === 500) entry.stack = error.stack;
+  console.log(JSON.stringify(entry));
   return { statusCode, payload: { error: statusCode === 500 ? 'Error interno del servidor' : error.message } };
 }
 

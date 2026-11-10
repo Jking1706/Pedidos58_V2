@@ -38,6 +38,8 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
       res.setHeader('Vary', 'Origin');
     }
+    const logPathname = String(req.url || '/').split('?')[0] || '/';
+    const logMethod = req.method || 'GET';
     try {
     const requestUrl = new URL(req.url, `http://localhost:${PORT_NUMBER}`);
     const { pathname, searchParams } = requestUrl;
@@ -158,7 +160,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
 
     sendJson(res, 404, { error: 'Ruta no encontrada' });
     } catch (error) {
-      if (!res.headersSent && !res.destroyed) handleError(res, error);
+      if (!res.headersSent && !res.destroyed) handleError(res, error, { method: logMethod, pathname: logPathname });
       else res.destroy();
     }
   }
