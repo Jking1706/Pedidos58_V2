@@ -1,13 +1,13 @@
 (function (root) {
   const loads = new Map();
   const libraries = {
-    chart: ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', () => root.Chart],
-    excel: ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', () => root.XLSX],
-    pdf: ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', () => root.jspdf?.jsPDF],
-    tables: ['https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js', () => root.jspdf?.jsPDF?.API?.autoTable],
+    chart: ['https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js', 'sha384-9nhczxUqK87bcKHh20fSQcTGD4qq5GhayNYSYWqwBkINBhOfQLg/P5HG5lF1urn4', () => root.Chart],
+    excel: ['https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js', 'sha384-EnyY0/GSHQGSxSgMwaIPzSESbqoOLSexfnSMN2AP+39Ckmn92stwABZynq1JyzdT', () => root.XLSX],
+    pdf: ['https://cdn.jsdelivr.net/npm/jspdf@2.5.1/dist/jspdf.umd.min.js', 'sha384-JcnsjUPPylna1s1fvi1u12X5qjY5OL56iySh75FdtrwhO/SWXgMjoVqcKyIIWOLk', () => root.jspdf?.jsPDF],
+    tables: ['https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js', 'sha384-Xl/CUCfJbzsngMp0CFxkmF0VW/8C160IsGujqeQlIhaGxKz2+JsIGORFqtCPeldF', () => root.jspdf?.jsPDF?.API?.autoTable],
   };
   function load(name) {
-    const [url, ready] = libraries[name];
+    const [url, integrity, ready] = libraries[name];
     if (ready()) return Promise.resolve();
     if (loads.has(name)) return loads.get(name);
     const pending = new Promise((resolve, reject) => {
@@ -20,6 +20,10 @@
         reject(new Error(`No se pudo cargar ${name}. Comprueba la conexión e intenta otra vez.`));
       };
       script.src = url;
+      if (integrity) {
+        script.integrity = integrity;
+        script.crossOrigin = 'anonymous';
+      }
       script.onload = () => { if (!ready()) return fail(); clearTimeout(timeout); resolve(); };
       script.onerror = fail;
       document.head.append(script);

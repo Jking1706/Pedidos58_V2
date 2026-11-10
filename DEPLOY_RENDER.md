@@ -1,4 +1,4 @@
-# Deploy en Render
+﻿# Deploy en Render
 
 ## Requisitos
 
@@ -102,7 +102,7 @@ El primer arranque crea `empleados`, `empleado_sesiones` y `auth_login_limits`. 
 
 Las sesiones duran 8 horas y se almacenan como hashes en PostgreSQL. Las cookies son `HttpOnly`, `SameSite=Strict` y `Secure` en producción. Cada solicitud vuelve a verificar que el empleado siga activo. `/mi-sesion` permite cerrar sesión. Una sesión vencida redirige a `/login` cuando la página realiza una solicitud a la API.
 
-Las mutaciones requieren un encabezado `Origin` igual a `APP_ORIGIN` (incluido login y logout). Las pruebas manuales con curl deben enviarlo junto a la cookie y `Content-Type: application/json`. El límite de acceso es 10 intentos por usuario y 100 globales por ventana de 15 minutos; responde 429 al superarlo.
+Las mutaciones requieren un encabezado `Origin` igual a `APP_ORIGIN` (incluido login y logout). Las pruebas manuales con curl deben enviarlo junto a la cookie y `Content-Type: application/json`. El límite de acceso es 10 intentos por usuario, 20 por IP (primera l\u00ednea de `X-Forwarded-For`) y 100 globales por ventana de 15 minutos; responde 429 al superarlo.
 
 ### Crear o desactivar empleados
 
@@ -131,3 +131,19 @@ Restablecer la contraseña o desactivar revoca las sesiones existentes. No se pe
 5. Cerrar sesión y comprobar que la cookie anterior deja de dar acceso.
 
 No borrar las tablas de autenticación al revertir código. Volver a una versión sin autenticación vuelve a exponer las rutas administrativas.
+
+### Cabeceras de seguridad y escaneo externo
+
+Este servidor emite, en todas las respuestas: `X-Content-Type-Options: nosniff`, `X-Frame-Options: DENY`, `Referrer-Policy: same-origin`, `Content-Security-Policy` con `default-src 'self'` (scripts e imagenes limitados a mismo origen y a los CDNs pineados con SRI), `Permissions-Policy` revocando camara/microfono/geolocalizacion y `X-Robots-Tag: noindex,nofollow`. En produccion (`NODE_ENV=production`) tambien emite `Strict-Transport-Security: max-age=15552000; includeSubDomains`. Las hojas de estilos externas las sirve `https://fonts.gstatic.com` via `https://fonts.googleapis.com` y deben coincidir con `style-src`/`font-src` del CSP.
+
+Los scripts de terceros (Chart.js, SheetJS, jsPDF, jsPDF-autotable) cargan con `integrity` y `crossorigin=anonymous`; los hashes estan fijados a la version exacta del bundle (Chart.js 4.4.1, SheetJS 0.20.3, jsPDF 2.5.1+autotable). Si se actualiza la dependencia, hay que recalcular el hash SHA-384 del nuevo bundle y actualizar `report-tools.js`.
+
+Disposition de los hallazgos del escaner externo (`https://pedidos58-v2.onrender.com`, 10/11/2026):
+
+- HSTS, CSP, `X-Content-Type-Options`, `X-Frame-Options`, `Referrer-Policy`, `Permissions-Policy`: cubiertos por el codigo desde el commit reciente; el despliegue anterior no incluia estas cabeceras (el servidor Render servia contenido sin ellas). Tras redisplegar, se emiten en cada respuesta.
+- `.env`, `.git/` y `package.json`: verificados 404 en la URL publica; el \x27raw\x27 estatico nunca se sirve porque solo `index.html`, `auth.html` y paginas protegidas proceden de la raiz del repo.
+- SPF/DKIM/DMARC para `pedidos58-v2.onrender.com`: DNS del dominio compartido de Render; la app no envia correo, por lo que no puede spoofearse email "de pedidos58". Se recomienda fijar un dominio propio para publicar SPF/DKIM/DMARC si se usa correo.
+- WordPress/plugins: N/A, la app no usa WordPress.
+- Redireccion HTTP -> HTTPS: confirmada (301 de Cloudflare).
+
+Para monitoreo externo periódico se sugiere integrar `nuclei -t cves -u <dominio> -silent` como verificación programada, pero no es un control de acceso ni sustituye las cabeceras del servidor.

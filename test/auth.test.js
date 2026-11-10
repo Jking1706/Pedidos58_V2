@@ -139,5 +139,12 @@ test("la respuesta incluye X-Request-Id y correlacion con los logs", async (t) =
   const base = `http://127.0.0.1:${server.address().port}`;
   const res = await fetch(`${base}/api/health`, { headers: { 'x-request-id': acceptedId } });
   assert.equal(res.headers.get('x-request-id'), acceptedId);
+  const h = (name) => res.headers.get(name);
+  assert.ok(h('Content-Security-Policy')?.startsWith("default-src 'self'"));
+  assert.ok(h('Permissions-Policy').includes('camera=(), microphone=(), geolocation=()'));
+  assert.match(h('X-Frame-Options'), /DENY/);
+  assert.match(h('X-Content-Type-Options'), /^nosniff$/);
+  assert.match(h('Referrer-Policy'), /same-origin/);
+  assert.match(h('X-Robots-Tag'), /noindex, nofollow/);
 });
 
