@@ -15,7 +15,9 @@ const PEDIDO_COLUMNS = `
   fecha,
   hora,
   entregado,
-  estado
+  estado,
+  preparacion_at,
+  listo_at
 `;
 
 function hoy() {
@@ -99,6 +101,70 @@ async function listarPedidos(fecha = hoy()) {
   );
 
   return mapRows(result.rows);
+}
+
+async function listarCola(fecha = hoy()) {
+  const result = await pool.query(
+    `SELECT ${PEDIDO_COLUMNS} FROM pedidos WHERE fecha = $1 ORDER BY id DESC`,
+    [fecha]
+  );
+  const pedidos = mapRows(result.rows);
+  const contadores = { Nuevo: 0, 'En preparación': 0, Listo: 0, Entregado: 0, Cancelado: 0 };
+  let totalActivo = 0;
+  for (const pedido of pedidos) {
+    if (Object.prototype.hasOwnProperty.call(contadores, pedido.estado)) contadores[pedido.estado] += 1;
+    if (pedido.estado === 'Nuevo' || pedido.estado === 'En preparación' || pedido.estado === 'Listo') {
+      totalActivo += Number(pedido.total) || 0;
+    }
+  }
+  return { fecha, pedidos, contadores, totalActivo };
+}
+
+const COLA_TRANSITION_FROM = {
+  prep: ['Nuevo'],
+  ready: ['En preparación'],
+};
+const COLA_TRANSITION_TARGET = {
+  prep: 'En preparación',
+  ready: 'Listo',
+};
+const COLA_TRANSITION_COLUMN = {
+  prep: 'preparacion_at',
+  ready: 'listo_at',
+};
+
+async function transicionarPedido(id, transicion) {
+  if (!Object.prototype.hasOwnProperty.call(COLA_TRANSITION_FROM, transicion)) {
+    throw Object.assign(new Error('Transición inválida (usa "prep" o "ready")'), { statusCode: 400 });
+  }
+  const current = await obtenerPedidoPorId(id);
+  if (!current) {
+    throw Object.assign(new Error('Pedido no encontrado'), { statusCode: 404 });
+  }
+  if (current.estado === COLA_TRANSITION_TARGET[transicion]) {
+    return current;
+  }
+  const previous = COLA_TRANSITION_FROM[transicion][0];
+  if (current.estado !== previous) {
+    throw Object.assign(
+      new Error(`Transición inválida: ${current.estado} → ${COLA_TRANSITION_TARGET[transicion]}`),
+      { statusCode: 409, payload: { from: current.estado, to: COLA_TRANSITION_TARGET[transicion] } }
+    );
+  }
+  const result = await pool.query(
+    `UPDATE pedidos SET estado = $1, ${COLA_TRANSITION_COLUMN[transicion]} = NOW()
+     WHERE id = $2 AND estado = $3
+     RETURNING ${PEDIDO_COLUMNS}`,
+    [COLA_TRANSITION_TARGET[transicion], id, previous]
+  );
+  if (!result.rowCount) {
+    const fresh = await obtenerPedidoPorId(id);
+    throw Object.assign(
+      new Error('Transición inválida: pedido modificado por otra operación'),
+      { statusCode: 409, payload: { from: fresh?.estado || null, to: COLA_TRANSITION_TARGET[transicion] } }
+    );
+  }
+  return normalizarPedido(result.rows[0]);
 }
 
 async function listarPedidosRango(desde = hoy(), hasta = hoy()) {
@@ -363,15 +429,17 @@ async function exportarPedidosCsv(fecha = hoy()) {
 }
 
 module.exports = {
+  actualizarPedido,
   calcularSubtotal,
   crearPedido,
   eliminarPedido,
   exportarPedidosCsv,
   hoy,
+  listarCola,
   listarPedidos,
   listarPedidosRango,
   obtenerPedidoPorId,
   obtenerResumen,
   obtenerStats,
-  actualizarPedido,
+  transicionarPedido,
 };

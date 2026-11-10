@@ -15,6 +15,18 @@ async function handlePedidos(context) {
     return pedidosController.getPedidos(query);
   }
 
+  if (method === 'GET' && pathname === '/api/pedidos/cola') {
+    return pedidosController.getCola(query);
+  }
+
+  if (method === 'POST' && /^\/api\/pedidos\/\d+\/transicion$/.test(pathname)) {
+    const id = Number(pathname.split('/')[3]);
+    if (!Number.isInteger(id) || id <= 0) {
+      throw Object.assign(new Error('ID inválido'), { statusCode: 400 });
+    }
+    return pedidosController.postTransicion(id, body);
+  }
+
   if (method === 'GET' && pathname === '/api/pedidos/rango') {
     return pedidosController.getPedidosRango(query);
   }

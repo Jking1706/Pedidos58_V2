@@ -3,10 +3,12 @@ const {
   crearPedido,
   eliminarPedido,
   exportarPedidosCsv,
+  listarCola,
   listarPedidos,
   listarPedidosRango,
   obtenerResumen,
   obtenerStats,
+  transicionarPedido,
 } = require('../services/pedidos.service');
 
 async function getPedidos(query) {
@@ -58,6 +60,36 @@ async function postPedido(body) {
   };
 }
 
+async function getCola(query) {
+  const fecha = query.get('fecha') || undefined;
+  const data = await listarCola(fecha);
+
+  return {
+    statusCode: 200,
+    payload: data,
+  };
+}
+
+async function postTransicion(id, body) {
+  try {
+    const transicion = String(body?.transicion || '').trim().toLowerCase();
+    const pedido = await transicionarPedido(id, transicion);
+
+    return {
+      statusCode: 200,
+      payload: pedido,
+    };
+  } catch (error) {
+    if (error.statusCode === 409 && error.payload) {
+      return {
+        statusCode: 409,
+        payload: { error: 'Transición inválida', from: error.payload.from, to: error.payload.to },
+      };
+    }
+    throw error;
+  }
+}
+
 async function putPedido(id, body) {
   const pedido = await actualizarPedido(id, body);
 
@@ -92,11 +124,13 @@ async function getExport(query) {
 
 module.exports = {
   deletePedido,
+  getCola,
   getExport,
   getPedidos,
   getPedidosRango,
   getResumen,
   getStats,
   postPedido,
+  postTransicion,
   putPedido,
 };

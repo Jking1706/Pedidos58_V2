@@ -57,8 +57,10 @@ function assertSameOrigin(req) {
 function canAccess(role, method, pathname, query = new URLSearchParams(), body = {}) {
   if (!ROLES.includes(role)) return false;
   if (role === 'admin') return true;
+  if (role === 'consulta' && pathname === '/api/pedidos/cola') return false;
   if (method === 'GET' && pathname !== '/api/google-sheets') return true;
   if (role !== 'caja') return false;
+  if (method === 'POST' && /^\/api\/pedidos\/\d+\/transicion$/.test(pathname)) return true;
   if (method === 'GET' && pathname === '/api/google-sheets') return query.get('action') === 'catalogo';
   if (method === 'POST' && ['/api/pedidos', '/api/gastos', '/api/gastos/pos', '/api/caja/abrir', '/api/caja/cerrar'].includes(pathname)) return true;
   if (method === 'PUT' && /^\/api\/(pedidos|gastos)\/\d+$/.test(pathname)) return true;

@@ -23,7 +23,7 @@ async function request(handler, method, pathname) {
   }
 }
 
-for (const pathname of ['/api-client.js', '/pos-core.js', '/pos-gastos.js', '/pos-pedidos.js', '/pos-ui.js']) {
+for (const pathname of ['/api-client.js', '/pos-core.js', '/pos-gastos.js', '/pos-pedidos.js', '/pos-ui.js', '/pos-cola.js']) {
   test(`${pathname} responde 200 application/javascript para admin`, async () => {
     const handler = createRequestHandler({
       authService: {
@@ -40,3 +40,14 @@ for (const pathname of ['/api-client.js', '/pos-core.js', '/pos-gastos.js', '/po
     assert.equal(Buffer.compare(body, onDisk), 0);
   });
 }
+
+test('index.html tiene los delimitadores de plantilla completos (sin <style> abierto sin cerrar)', async () => {
+  const html = fs.readFileSync(path.join(__dirname, '..', 'index.html'), 'utf8');
+  const styleOpens = (html.match(/<style\b/gi) || []).length;
+  const styleCloses = (html.match(/<\/style>/gi) || []).length;
+  assert.equal(styleOpens, styleCloses, 'Etiquetas <style> desbalanceadas en index.html');
+  const headOpen = html.indexOf('<head>');
+  const headClose = html.indexOf('</head>');
+  const bodyOpen = html.indexOf('<body>');
+  assert.ok(headOpen >= 0 && headOpen < headClose && headClose < bodyOpen, 'head/body no están en orden esperado');
+});

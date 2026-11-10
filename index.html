@@ -901,6 +901,39 @@
     .comanda-notas { font-size: 11pt; font-weight: 700; border: 1pt solid #000; padding: 4pt 6pt; margin-top: 6pt; }
     .comanda-total { border-top: 2pt solid #000; font-size: 14pt; font-weight: 800; padding-top: 5pt; margin-top: 6pt; display: flex; justify-content: space-between; }
   }
+/* Cola de pedidos */
+.cola-shell { background: var(--crema); } display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 18px 8px; flex-wrap: wrap; }
+.cola-head h2, .cola-head h3 { font-weight: 800; color: #181410; }
+.cola-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
+.btn-cola-toolbar { border: 1px solid #d8d2c8; border-radius: 8px; background: #fff; padding: 6px 12px; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
+.cola-sound-toggle { background: var(--azul); color: #fff; border-color: var(--azul); }
+.is-on { background: var(--gris); }
+.cola-count { font-size: 0.9rem; font-weight: 800; color: #6B5200; padding: 4px 10px; background: #FFF4CC; border: 1.5px solid #E0B100; border-radius: 999px; }
+.cola-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; padding: 0 18px 16px; align-content: start; }
+.cola-col { background: #fff; border: 1px solid var(--gris2); border-radius: 12px; box-shadow: 0 4px 14px rgba(0,0,0,0.08); display: flex; flex-direction: column; min-height: 120px; }
+.cola-col-title { padding: 10px 12px; font-size: 0.9rem; font-weight: 800; color: #6B5200; border-bottom: 2px dashed #E0D8C0; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.cola-list { padding: 8px; display: flex; flex-direction: column; gap: 8px; min-height: 40px; }
+.cola-card { background: #fff; border: 1px solid #e6e0d4; border-left: 4px solid #E0B100; border-radius: 10px; padding: 10px 12px; font-family: 'Nunito', sans-serif; }
+.cola-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
+.cola-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
+.cola-card-numero { font-weight: 800; color: #181410; font-variant-numeric: tabular-nums; }
+.cola-card-hora { font-weight: 700; color: #6b5200; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.cola-card-items { font-size: 0.78rem; color: #3a322a; margin: 2px 0 6px; }
+.cola-card-total { color: #cf1720; font-weight: 800; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
+.cola-card-meta { font-size: 0.74rem; color: #9b8d76; word-break: break-all; }
+.cola-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
+.btn-cola-accion { border: none; border-radius: 7px; padding: 6px 12px; font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
+.btn-cola-accion.prep-btn { background: var(--rojo); color: #fff; }
+.btn-cola-accion.ready-btn { background: #168443; color: #fff; }
+.btn-cola-accion.entregar-btn { background: var(--gris2); color: #181410; }
+.cola-footer { border-top: 1px solid #E0D8C0; background: #fff; padding: 10px 18px; display: flex; justify-content: space-between; gap: 12px; flex-wrap: wrap; font-size: 0.85rem; font-weight: 700; color: #3a322a; }
+@media (max-width: 768px) {
+  .cola-grid { grid-template-columns: 1fr; }
+  .cola-shell .cola-head { flex-direction: column; }
+}
+@media (max-width: 480px) {
+  .cola-card-numero, .cola-card-total { font-size: 0.72rem; }
+}
 </style>
 </head>
 <body>
@@ -917,6 +950,7 @@
   </div>
   <nav class="app-tabs" aria-label="Secciones principales">
     <button class="app-tab is-active" type="button" data-tab-target="pedidos">Pedidos</button>
+    <button class="app-tab" type="button" data-tab-target="cola">Cola</button>
     <button class="app-tab" type="button" data-tab-target="gastos">Gastos</button>
     <button class="app-tab" type="button" data-tab-target="dashboard">Dashboard</button>
   </nav>
@@ -1037,6 +1071,39 @@
 
 <div class="toast" id="toast"></div>
 
+</section>
+
+<section class="tab-panel" data-tab-panel="cola">
+  <div class="page-shell cola-shell">
+    <div class="page-head cola-head">
+      <div class="cola-head-text">
+        <span class="section-pill">En cocina</span>
+        <h2>Cola de pedidos</h2>
+        <p>Aviso visual del ritmo de la cocina: cocinando por orden de llegada.</p>
+      </div>
+      <div class="cola-toolbar" role="toolbar" aria-label="Herramientas de la cola">
+        <button type="button" class="btn-cola-toolbar cola-sound-toggle is-on" id="btn-cola-sonido" aria-pressed="true">🔊 Sonido ON</button>
+        <button type="button" class="btn-cola-toolbar" id="btn-cola-pausa" aria-pressed="false">⏸ Pausar</button>
+        <button type="button" class="btn-cola-toolbar" id="btn-cola-refrescar">↻ Refrescar</button>
+        <span class="cola-count" id="cola-count" aria-live="polite">—</span>
+      </div>
+    </div>
+    <div class="cola-grid" id="cola-grid">
+      <section class="cola-col" aria-label="Nuevos">
+        <h3 class="cola-col-title">🟢 Nuevo <span id="cola-count-new">0</span></h3>
+        <div class="cola-list" id="cola-list-new"></div>
+      </section>
+      <section class="cola-col" aria-label="En cocina">
+        <h3 class="cola-col-title">🍳 En preparación <span id="cola-count-prep">0</span></h3>
+        <div class="cola-list" id="cola-list-prep"></div>
+      </section>
+      <section class="cola-col" aria-label="Listos para entrega">
+        <h3 class="cola-col-title">✅ Listo <span id="cola-count-ready">0</span></h3>
+        <div class="cola-list" id="cola-list-ready"></div>
+      </section>
+    </div>
+    <div class="cola-footer" id="cola-footer" aria-live="polite"></div>
+  </div>
 </section>
 
 <section class="tab-panel" data-tab-panel="gastos">
@@ -1222,5 +1289,6 @@
 <script src="/pos-pedidos.js"></script>
 <script src="/pos-gastos.js"></script>
 <script src="/pos-ui.js"></script>
+<script src="/pos-cola.js"></script>
 </body>
 </html>

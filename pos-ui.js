@@ -55,7 +55,7 @@ function toggleDatosCliente(forceCollapsed) {
 toggleDatosCliente(false);
 
 function setActiveTab(tabName, updateHash = true) {
-  const nextTab = ['pedidos', 'gastos', 'dashboard'].includes(tabName) ? tabName : 'pedidos';
+  const nextTab = ['pedidos', 'cola', 'gastos', 'dashboard'].includes(tabName) ? tabName : 'pedidos';
 
   tabButtons.forEach((button) => {
     const isActive = button.dataset.tabTarget === nextTab;
@@ -81,7 +81,7 @@ function setActiveTab(tabName, updateHash = true) {
 
 function getInitialTab() {
   const hash = String(window.location.hash || '').replace('#', '').trim();
-  return ['pedidos', 'gastos', 'dashboard'].includes(hash) ? hash : 'pedidos';
+  return ['pedidos', 'cola', 'gastos', 'dashboard'].includes(hash) ? hash : 'pedidos';
 }
 
 function mostrarToast(msg) {
