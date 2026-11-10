@@ -27,3 +27,21 @@ function fetchWithTimeout(url, options = {}, timeoutMs = 0) {
   return fetch(url, { ...options, signal: controller.signal })
     .finally(() => clearTimeout(timer));
 }
+
+async function apiJson(url, options = {}) {
+  const response = await fetch(url, {
+    headers: { 'Content-Type': 'application/json', ...(options.headers || {}) },
+    ...options,
+  });
+
+  const text = await response.text();
+  let payload = null;
+  try { payload = text ? JSON.parse(text) : null; } catch { payload = text; }
+
+  if (!response.ok) {
+    const message = payload?.error || payload?.message || `HTTP ${response.status}`;
+    throw new Error(message);
+  }
+
+  return payload;
+}

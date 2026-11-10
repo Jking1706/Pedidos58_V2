@@ -194,22 +194,8 @@
 
 </div>
 
+<script src="/api-client.js"></script>
 <script>
-function resolveApiBase() {
-  const explicit = String(window.__API_BASE__ || '').trim();
-  if (explicit) {
-    return explicit.replace(/\/$/, '');
-  }
-
-  const origin = String(window.location.origin || '').trim();
-  if (origin && origin !== 'null' && !origin.startsWith('file:')) {
-    return `${origin}/api`;
-  }
-
-  return 'http://localhost:3000/api';
-}
-
-const API = resolveApiBase();
 const fmt = n => '$' + parseInt(n).toLocaleString('es-CO');
 
 let pedidosActuales = [];
@@ -246,8 +232,7 @@ window.onload = () => {
 // ─── STATS GENERALES ─────────────────────────────────────────────
 async function cargarStats() {
   try {
-    const r = await fetch(`${API}/stats`);
-    const d = await r.json();
+    const d = await apiJson(`${API}/stats`);
     document.getElementById('stats-grid').innerHTML = `
       <div class="stat-card">
         <div class="stat-valor">${d.total.n}</div>
@@ -291,9 +276,7 @@ async function buscar() {
   tbody.innerHTML = '<tr><td colspan="8"><div class="loading"><span class="spinner"></span>Buscando...</div></td></tr>';
 
   try {
-    const url = `${API}/pedidos/rango?desde=${encodeURIComponent(inputAFecha(desde))}&hasta=${encodeURIComponent(inputAFecha(hasta))}`;
-    const r = await fetch(url);
-    const data = await r.json();
+    const data = await apiJson(`${API}/pedidos/rango?desde=${encodeURIComponent(inputAFecha(desde))}&hasta=${encodeURIComponent(inputAFecha(hasta))}`);
     pedidosActuales = data;
     renderTabla(data);
     renderResumenPeriodo(data);

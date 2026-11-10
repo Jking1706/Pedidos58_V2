@@ -34,6 +34,7 @@ function dashboardFixture() {
     },
   });
   const html = fs.readFileSync(path.join(__dirname, '../admin-dashboard.html'), 'utf8');
+  vm.runInContext(fs.readFileSync(path.join(__dirname, '../api-client.js'), 'utf8'), context);
   const script = [...html.matchAll(/<script(?![^>]*src)[^>]*>([\s\S]*?)<\/script>/g)].at(-1)[1];
   vm.runInContext(script.slice(0, script.indexOf("    presetButtons.forEach((button) => {\n      button.addEventListener")), context);
   return { context, requests, books, get };
