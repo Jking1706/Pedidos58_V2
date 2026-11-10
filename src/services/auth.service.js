@@ -1,3 +1,8 @@
+function clientIpKey(req) {
+  const forwarded = String(req?.headers?.['x-forwarded-for'] || '').split(',').map((value) => value.trim()).filter(Boolean)[0];
+  return forwarded || req?.socket?.remoteAddress || req?.connection?.remoteAddress || 'unknown';
+}
+
 const { randomBytes, scrypt: scryptCallback, timingSafeEqual, createHash } = require('node:crypto');
 const { promisify } = require('node:util');
 const scrypt = promisify(scryptCallback);
@@ -94,6 +99,8 @@ function createAuth(pool) {
 
   async function login(body, req) {
     await consumeLimit('global', 100);
+    // Bloqueo por IP antes de verificar si la cuenta existe, como el límite por usuario.
+    await consumeLimit(`ip:${digest(clientIpKey(req))}`, 20);
     const username = normalizeUsername(body.username);
     if (typeof body.password !== 'string' || body.password.length > 128) throw failure('Usuario o contraseña incorrectos', 401);
     await consumeLimit(`user:${digest(username)}`, 10);

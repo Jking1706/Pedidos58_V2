@@ -10,6 +10,7 @@ const productos = require('../src/services/productos.service');
 const categorias = require('../src/services/categorias.service');
 const dashboard = require('../src/services/dashboard.service');
 const { proxyGoogleSheets } = require('../src/services/googleSheets.service');
+const { createAuth } = require('../src/services/auth.service');
 
 test('listCaja arma resumen de caja abierta con movimiento del dia', async () => {
   query = async (sql) => {
@@ -247,4 +248,19 @@ test('http_error: handleError responde con contrato y registra log', () => {
   } finally {
     console.log = originalLog;
   }
+});
+
+test('login: rate-limit por IP se verifica antes de tocar cuentas existentes', async () => {
+  let queries = 0;
+  const stubPool = { async query(sql) {
+    queries += 1;
+    if (sql.startsWith('INSERT INTO auth_login_limits')) return { rows: [{ attempts: 21 }] };
+    return { rows: [{ attempts: 1 }] };
+  } };
+  const auth = createAuth(stubPool);
+  await assert.rejects(
+    auth.login({ username: 'cualquiera', password: 'cualquierPassword123' }, { headers: {} }),
+    { statusCode: 429 }
+  );
+  assert.equal(queries, 2, 'global + ip: la consulta por usuario nunca debe ejecutarse tras superar el límite de IP');
 });
