@@ -1,3 +1,5 @@
+const { logEvent } = require('./logger');
+
 function getCorsHeaders(extraHeaders = {}) {
   return {
     'Access-Control-Allow-Methods': 'GET,POST,PUT,DELETE,PATCH,OPTIONS',
@@ -81,10 +83,11 @@ function errorResult(error, context = {}) {
     errorMessage: error.message,
     method: context.method ? String(context.method).toUpperCase() : undefined,
     pathname: context.pathname ? String(context.pathname) : undefined,
+    requestId: context.requestId ? String(context.requestId) : undefined,
     timestamp: new Date().toISOString(),
   };
   if (statusCode === 500) entry.stack = error.stack;
-  console.log(JSON.stringify(entry));
+  logEvent(entry);
   return { statusCode, payload: { error: statusCode === 500 ? 'Error interno del servidor' : error.message } };
 }
 

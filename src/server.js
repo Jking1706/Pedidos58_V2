@@ -1,6 +1,8 @@
 const fs = require('fs');
 const http = require('http');
+const { randomUUID } = require('node:crypto');
 const path = require('path');
+const { logEvent } = require('./utils/logger');
 const { initializeDatabase } = require('./services/database.service');
 const { handleApiRoute, respondApiResult } = require('./routes/api.routes');
 const { getCorsHeaders, readJsonBody, sendJson } = require('./utils/http');
@@ -38,6 +40,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
       res.setHeader('Access-Control-Allow-Origin', req.headers.origin);
       res.setHeader('Vary', 'Origin');
     }
+    const requestId = req.requestId || randomUUID();
     const logPathname = String(req.url || '/').split('?')[0] || '/';
     const logMethod = req.method || 'GET';
     try {
@@ -152,6 +155,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
         query: searchParams,
         body,
         res,
+        requestId,
       });
 
       respondApiResult(res, result);
@@ -160,7 +164,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
 
     sendJson(res, 404, { error: 'Ruta no encontrada' });
     } catch (error) {
-      if (!res.headersSent && !res.destroyed) handleError(res, error, { method: logMethod, pathname: logPathname });
+      if (!res.headersSent && !res.destroyed) handleError(res, error, { method: logMethod, pathname: logPathname, requestId });
       else res.destroy();
     }
   }
@@ -170,18 +174,14 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
     const requestUrl = new URL(req.url, `http://localhost:${PORT_NUMBER}`);
     const { pathname, searchParams } = requestUrl;
     const method = req.method || 'GET';
+    const incomingRequestId = String(req.headers['x-request-id'] || '').trim();
+    const requestId = /^[a-f0-9]{8}-[a-z0-9]{4}-/.test(incomingRequestId) ? incomingRequestId : randomUUID();
+    req.requestId = requestId;
+    if (!res.headersSent) res.setHeader('X-Request-Id', requestId);
     try {
       await handleRequest(req, res);
     } finally {
-      console.log(JSON.stringify({
-        level: 'info',
-        event: 'http_request',
-        method,
-        pathname,
-        statusCode: res.statusCode || 0,
-        durationMs: Date.now() - startedAt,
-        timestamp: new Date().toISOString(),
-      }));
+      logEvent({ level: 'info', event: 'http_request', method, pathname, statusCode: res.statusCode || 0, durationMs: Date.now() - startedAt, timestamp: new Date().toISOString(), requestId });
     }
   };
 }

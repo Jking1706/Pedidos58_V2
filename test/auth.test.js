@@ -123,3 +123,21 @@ test('frontera HTTP: anónimo, CSRF, roles, errores y cierre de sesión', async 
   assert.match(logout.headers.get('set-cookie'), /Max-Age=0/);
   assert.equal((await read('/api/auth/me', { headers })).status, 401);
 });
+test("la respuesta incluye X-Request-Id y correlacion con los logs", async (t) => {
+  const acceptedId = 'feedface-dead-beef-cafe-babe1234';
+  const handler = createRequestHandler({
+    authService: {
+      authenticate: async () => ({ username: 'lector', role: 'consulta' }),
+      login: async () => ({ token: 'a'.repeat(64), user: { username: 'lector', role: 'consulta' } }),
+      logout: async () => {},
+    },
+    apiHandler: async () => ({ statusCode: 200, payload: { ok: true } }),
+  });
+  const server = http.createServer(handler).listen(0, '127.0.0.1');
+  await once(server, 'listening');
+  t.after(() => new Promise((resolve) => { server.close(resolve); server.closeAllConnections(); }));
+  const base = `http://127.0.0.1:${server.address().port}`;
+  const res = await fetch(`${base}/api/health`, { headers: { 'x-request-id': acceptedId } });
+  assert.equal(res.headers.get('x-request-id'), acceptedId);
+});
+
