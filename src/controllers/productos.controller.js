@@ -12,12 +12,45 @@ function parseIncludeInactive(query) {
   return ['1', 'true', 'yes', 'on', 'all'].includes(value);
 }
 
-async function getProductos(query) {
-  const productos = await listProducts({ includeInactive: parseIncludeInactive(query) });
+// Huella ligera del catálogo para ETag/304 sin una segunda consulta a la base.
+// Se basa en el mayor updated_at y en la cantidad de productos devueltos.
+function productsFingerprint({ rows, includeInactive = false }) {
+  let maxUpdated = 0;
+  for (const row of rows || []) {
+    const ts = new Date(row.updated_at || row.updatedAt || 0).getTime();
+    if (Number.isFinite(ts) && ts > maxUpdated) maxUpdated = ts;
+  }
+  return `${maxUpdated}-${rows?.length ?? 0}-${includeInactive ? 'all' : 'active'}`;
+}
+
+function matchesIfNoneMatch(headerValue, etag) {
+  if (!headerValue) return false;
+  return String(headerValue)
+    .split(',')
+    .map((value) => value.trim())
+    .filter(Boolean)
+    .some((candidate) => candidate === etag || candidate === '*');
+}
+
+async function getProductos(query, contextHeaders = {}) {
+  const includeInactive = parseIncludeInactive(query);
+  const productos = await listProducts({ includeInactive });
+
+  const fingerprint = productsFingerprint({ rows: productos, includeInactive });
+  const etag = `W/"productos-${fingerprint}"`;
+
+  if (matchesIfNoneMatch(contextHeaders['if-none-match'], etag)) {
+    return {
+      statusCode: 304,
+      payload: undefined,
+      headers: { 'ETag': etag },
+    };
+  }
 
   return {
     statusCode: 200,
     payload: productos,
+    headers: { 'ETag': etag, 'Cache-Control': 'no-cache' },
   };
 }
 

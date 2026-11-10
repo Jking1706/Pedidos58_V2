@@ -100,9 +100,19 @@ async function initApp() {
   void verificarServidor();
   setInterval(verificarServidor, 30000); // Re-chequear cada 30s
   actualizarFabCarrito();
+  mostrarPedidoPendiente();
   renderGastoCarrito();
   if (gastoCompraMetodoPagoSelect) {
     gastoCompraMetodoPagoSelect.value = cargarMetodoPagoCompraGastoLocalStorage();
+  }
+  const impCheck = document.getElementById('imp-print-checkbox');
+  const impSaveToggle = document.getElementById('imp-print-toggle');
+  if (impCheck && impSaveToggle) {
+    try { impCheck.checked = localStorage.getItem('sabor58:imprimir-comanda') !== '0'; } catch {}
+    impCheck.addEventListener('change', () => {
+      try { localStorage.setItem('sabor58:imprimir-comanda', impCheck.checked ? '1' : '0'); } catch {}
+      impSaveToggle.focus();
+    });
   }
   setActiveTab(getInitialTab(), false);
 

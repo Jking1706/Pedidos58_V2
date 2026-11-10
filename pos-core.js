@@ -152,14 +152,51 @@ let MENU = [];
 let TODOS = [];
 let productosLoadPromise = null;
 
+const CATALOGO_CACHE_KEY = 'sabor58:catalogo-v1';
+
+function leerCacheCatalogo() {
+  try {
+    const raw = localStorage.getItem(CATALOGO_CACHE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !Array.isArray(parsed.payload)) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function guardarCacheCatalogo(etag, payload) {
+  try {
+    localStorage.setItem(
+      CATALOGO_CACHE_KEY,
+      JSON.stringify({ etag: etag || null, payload, savedAt: Date.now() })
+    );
+  } catch {}
+}
+
+function aplicarCatalogo(payload) {
+  MENU = agruparProductosDesdeApi(payload);
+  TODOS = MENU.flatMap((categoria) => categoria.productos);
+  return MENU;
+}
+
 async function cargarProductosDesdeServidor(force = false) {
   if (productosLoadPromise && !force) {
     return productosLoadPromise;
   }
 
   productosLoadPromise = (async () => {
+    const cached = leerCacheCatalogo();
     try {
-      const response = await fetchWithTimeout(`${API}/productos`, {}, 10000);
+      const headers = {};
+      if (!force && cached?.etag) headers['If-None-Match'] = cached.etag;
+      const response = await fetchWithTimeout(`${API}/productos`, { headers }, 10000);
+
+      if (response.status === 304 && cached?.payload) {
+        return aplicarCatalogo(cached.payload);
+      }
+
       const text = await response.text();
       let payload;
 
@@ -173,10 +210,13 @@ async function cargarProductosDesdeServidor(force = false) {
         throw new Error('No se pudo cargar el catálogo de productos');
       }
 
-      MENU = agruparProductosDesdeApi(payload);
-      TODOS = MENU.flatMap((categoria) => categoria.productos);
-      return MENU;
+      guardarCacheCatalogo(response.headers.get('etag'), payload);
+      return aplicarCatalogo(payload);
     } catch (error) {
+      if (cached?.payload) {
+        console.warn('[Productos] sin conexión, se usa el catálogo guardado:', error);
+        return aplicarCatalogo(cached.payload);
+      }
       console.error('[Productos] error:', error);
       throw error;
     } finally {

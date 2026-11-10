@@ -4,7 +4,7 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const path = require('node:path');
 
-function fixture(fetchWithTimeout) {
+function fixture(fetchWithTimeout, overrides = {}) {
   const elements = new Map();
   const get = id => {
     if (!elements.has(id)) elements.set(id, { textContent: '', disabled: false });
@@ -18,6 +18,9 @@ function fixture(fetchWithTimeout) {
     calcTotal: () => 16000, leerDatosPedido: () => ({ cliente: 'Prueba' }), fechaHoy: () => '09/11/2026',
     limpiarCamposPedido() {}, actualizarUI() {}, actualizarStatusBar() {}, mostrarToast() {},
     esVistaMovil: () => false, enviarPedidoASheets: async () => {},
+    debeImprimirComanda: () => false, imprimirComanda() {},
+    guardarPedidoPendiente() {}, mostrarPedidoPendiente() {},
+    ...overrides,
   });
   const html = fs.readFileSync(path.join(__dirname, '../pos-pedidos.js'), 'utf8');
   const start = html.indexOf('let guardandoPedido = false;');
@@ -29,20 +32,28 @@ function fixture(fetchWithTimeout) {
 }
 
 test('POS conserva carrito y no anuncia un guardado cuando HTTP rechaza el pedido', async () => {
-  const { context, get } = fixture(async () => ({ ok: false, status: 500 }));
+  let pending = 0;
+  const { context, get } = fixture(async () => ({ ok: false, status: 500 }), {
+    guardarPedidoPendiente() { pending++; },
+  });
   await context.confirmarPedido();
   assert.equal(context.carrito[1].qty, 2);
   assert.equal(context.pedidos.length, 0);
   assert.equal(context.pedidoCount, 0);
   assert.match(get('order-feedback').textContent, /rechazó/);
   assert.equal(get('btn-guardar').disabled, false);
+  assert.equal(pending, 0);
 });
 
 test('POS conserva datos ante respuesta perdida y advierte de revisar antes de reintentar', async () => {
-  const { context, get } = fixture(async () => { throw new TypeError('Failed to fetch'); });
+  let pending = 0;
+  const { context, get } = fixture(async () => { throw new TypeError('Failed to fetch'); }, {
+    guardarPedidoPendiente() { pending++; },
+  });
   await context.confirmarPedido();
   assert.equal(context.carrito[1].qty, 2);
-  assert.match(get('order-feedback').textContent, /evitar duplicados/);
+  assert.match(get('order-feedback').textContent, /reintentarlo/);
+  assert.equal(pending, 1);
 });
 
 test('POS bloquea doble envío y vacía el carrito solo tras confirmación', async () => {

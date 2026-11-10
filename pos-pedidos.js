@@ -105,6 +105,138 @@ function enviarPedidoASheets(pedido, accion = 'upsert') {
   return enviarAProxySheets(datos);
 }
 
+// ─── PEDIDO PENDIENTE (resiliencia ante pérdida de conexión) ──────
+const PEDIDO_PENDIENTE_KEY = 'sabor58:pedido-pendiente-v1';
+
+function leerPedidoPendiente() {
+  try {
+    const raw = localStorage.getItem(PEDIDO_PENDIENTE_KEY);
+    if (!raw) return null;
+    const parsed = JSON.parse(raw);
+    if (!parsed || typeof parsed !== 'object' || !parsed.payload || !parsed.fingerprint) return null;
+    return parsed;
+  } catch {
+    return null;
+  }
+}
+
+function pedidoFingerprint(payload) {
+  return JSON.stringify({
+    items: (payload.items || []).map((i) => [String(i.id ?? ''), String(i.qty), String(i.precio)]).sort(),
+    total: Number(payload.total) || 0,
+    fecha: String(payload.fecha || ''),
+    cliente: String(payload.cliente || ''),
+    notas: String(payload.notas || ''),
+  });
+}
+
+function guardarPedidoPendiente(payload) {
+  try {
+    localStorage.setItem(PEDIDO_PENDIENTE_KEY, JSON.stringify({ fingerprint: pedidoFingerprint(payload), payload }));
+  } catch {}
+}
+
+function olvidarPedidoPendiente() {
+  try { localStorage.removeItem(PEDIDO_PENDIENTE_KEY); } catch {}
+  document.getElementById('pedido-pendiente-banner')?.remove();
+}
+
+function pedidoCoincide(payload, candidato) {
+  if (!payload || !candidato) return false;
+  if (String(candidato.fecha) !== String(payload.fecha)) return false;
+  if (Number(candidato.total) !== Number(payload.total)) return false;
+  const key = (items) => (items || []).map((i) => `${i.id}:${i.qty}:${i.precio}`).sort().join('|');
+  if (key(candidato.items) !== key(payload.items)) return false;
+  if (String(candidato.cliente || '') !== String(payload.cliente || '')) return false;
+  if (String(candidato.notas || '') !== String(payload.notas || '')) return false;
+  return true;
+}
+
+function mostrarPedidoPendiente() {
+  if (document.getElementById('pedido-pendiente-banner')) return;
+  const pending = leerPedidoPendiente();
+  if (!pending) return;
+  const { payload } = pending;
+  const banner = document.createElement('div');
+  banner.id = 'pedido-pendiente-banner';
+  banner.className = 'pedido-pendiente-banner';
+  banner.setAttribute('role', 'alert');
+  banner.innerHTML = `
+    <span class="pedido-pendiente-texto">⚠️ Pedido sin confirmar${payload.fecha ? ` (${escapeHtml(String(payload.fecha))})` : ''} · ${fmt(Number(payload.total) || 0)}</span>
+    <button type="button" class="pedido-pendiente-btn" id="pedido-pendiente-retry">Reintentar</button>
+    <button type="button" class="pedido-pendiente-btn pedido-pendiente-descartar" id="pedido-pendiente-drop">Descartar</button>`;
+  document.body.appendChild(banner);
+  document.getElementById('pedido-pendiente-retry').addEventListener('click', () => void enviarPedidoPendiente());
+  document.getElementById('pedido-pendiente-drop').addEventListener('click', olvidarPedidoPendiente);
+}
+
+async function enviarPedidoPendiente() {
+  const pending = leerPedidoPendiente();
+  if (!pending) return;
+  const retryBtn = document.getElementById('pedido-pendiente-retry');
+  if (retryBtn) retryBtn.disabled = true;
+
+  // 1) Verificar si el pedido ya quedó guardado (respuesta perdida tras el POST)
+  try {
+    const r = await fetchWithTimeout(`${API}/pedidos?fecha=${encodeURIComponent(pending.payload.fecha)}`, {}, 10000);
+    if (r.ok) {
+      const lista = await r.json();
+      const match = Array.isArray(lista) && lista.find((p) => pedidoCoincide(pending.payload, p));
+      if (match) {
+        olvidarPedidoPendiente();
+        mostrarToast(`El pedido #${match.numero} ya estaba guardado.`);
+        void cargarPedidosHoy();
+        return;
+      }
+    }
+  } catch { /* sin conexión: se intenta POST de todos modos */ }
+
+  // 2) Reintentar el envío
+  try {
+    const r = await fetchWithTimeout(`${API}/pedidos`, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(pending.payload) }, 20000);
+    if (!r.ok) throw new Error('El servidor rechazó el pedido.');
+    const nuevo = await r.json();
+    const pedidoGuardado = { ...pending.payload, ...nuevo };
+    pedidos = [pedidoGuardado, ...pedidos.filter((p) => p.id !== nuevo.id)];
+    pedidoCount = Math.max(pedidoCount, Number(pedidoGuardado.numero) || 0);
+    olvidarPedidoPendiente();
+    actualizarStatusBar();
+    mostrarToast(`Pedido #${pedidoGuardado.numero} recuperado y guardado`);
+    void enviarPedidoASheets(pedidoGuardado, 'upsert');
+  } catch {
+    mostrarToast('No se confirmó el pedido pendiente. Revisa la lista antes de reintentar.');
+    if (retryBtn) retryBtn.disabled = false;
+  }
+}
+
+// ─── IMPRIMIR COMANDA ─────────────────────────────────────────────
+function imprimirComanda(pedido) {
+  const el = document.getElementById('comanda-print');
+  if (!el || !pedido) return;
+  const items = (pedido.items || []).map((i) => `
+      <tr><td class="comanda-qty">${escapeHtml(String(i.qty))}×</td><td>${escapeHtml(i.nombre)}</td><td class="comanda-precio">${fmt((Number(i.precio) || 0) * (Number(i.qty) || 1))}</td></tr>`).join('');
+  el.innerHTML = `
+    <div class="comanda">
+      <div class="comanda-brand">SABOR +58</div>
+      <div class="comanda-num">PEDIDO #${escapeHtml(String(pedido.numero ?? ''))}</div>
+      <div class="comanda-meta">${escapeHtml(String(pedido.fecha || ''))}${pedido.hora ? ` · ${escapeHtml(String(pedido.hora))}` : ''}${pedido.metodoPago ? ` · ${escapeHtml(String(pedido.metodoPago))}` : ''}</div>
+      ${pedido.cliente ? `<div class="comanda-line">👤 ${escapeHtml(String(pedido.cliente))}</div>` : ''}
+      ${pedido.direccion ? `<div class="comanda-line">📍 ${escapeHtml(String(pedido.direccion))}</div>` : ''}
+      <table class="comanda-items">${items}</table>
+      ${pedido.notas ? `<div class="comanda-notas">📝 ${escapeHtml(String(pedido.notas))}</div>` : ''}
+      <div class="comanda-total">TOTAL&nbsp;&nbsp;${fmt(Number(pedido.total) || 0)}</div>
+    </div>`;
+  window.print();
+}
+
+function debeImprimirComanda() {
+  try {
+    return localStorage.getItem('sabor58:imprimir-comanda') !== '0';
+  } catch {
+    return true;
+  }
+}
+
 // ─── GUARDAR PEDIDO ───────────────────────────────────────────────
 let guardandoPedido = false;
 async function confirmarPedido() {
@@ -153,11 +285,15 @@ async function confirmarPedido() {
     limpiarFieldsPedido();
     actualizarUI(); actualizarStatusBar();
     mostrarToast(`Pedido #${pedidoGuardado.numero} guardado en PostgreSQL`);
+    if (debeImprimirComanda()) imprimirComanda(pedidoGuardado);
     if (esVistaMovil()) toggleCarritoMobile(false);
   } catch (error) {
-    feedback.textContent = error instanceof TypeError || error.name === 'AbortError'
-      ? 'No pudimos confirmar el guardado. Conservamos el carrito. Revisa Pedidos antes de reintentar para evitar duplicados.'
+    const sinRespuesta = error instanceof TypeError || error.name === 'AbortError';
+    feedback.textContent = sinRespuesta
+      ? 'No pudimos confirmar el guardado. El pedido quedó pendiente en tu dispositivo. Revisa Pedidos para reintentarlo.'
       : error.message;
+    if (sinRespuesta) guardarPedidoPendiente(payload);
+    mostrarPedidoPendiente();
   } finally {
     guardandoPedido = false;
     btn.disabled = false; btn.textContent = 'Guardar pedido';
@@ -224,6 +360,7 @@ function renderPedidos() {
       </div>
       <div class="pedido-footer-btns">
         ${!p.entregado?`<button class="btn-editar-pedido ${estaEditando?'activo':''}" onclick="toggleEditar(${p.id})">${estaEditando?'✓ Listo':'✏️ Editar'}</button>`:''}
+        <button class="btn-imprimir-comanda" type="button" onclick="imprimirComanda(pedidos.find(x=>x.id===${p.id}))" aria-label="Imprimir comanda del pedido #${p.numero}">🖨️ Comanda</button>
         ${p.entregado?'<span class="tag-entregado">✓ Entregado</span>':`<button class="btn-entregar" onclick="marcarEntregado(${p.id})">✓ Entregar</button>`}
       </div>`;
     container.appendChild(card);
@@ -339,6 +476,8 @@ async function eliminarPedido(id) {
 }
 
 // ─── HISTORIAL ────────────────────────────────────────────────────
+let historialPedidos = [];
+
 async function cargarHistorial() {
   const inp = document.getElementById('fecha-historial');
   const val = inp.value; // YYYY-MM-DD
@@ -356,6 +495,7 @@ async function cargarHistorial() {
   try {
     const r = await fetch(`${API}/pedidos?fecha=${encodeURIComponent(fecha)}`);
     const data = await r.json();
+    historialPedidos = Array.isArray(data) ? data : [];
     const totalVentas = data.reduce((s,p)=>s+p.total,0);
     const entregados = data.filter(p=>p.entregado).length;
 
@@ -381,7 +521,10 @@ async function cargarHistorial() {
             ${p.direccion ? `<div><strong>📍 Dirección:</strong> ${escapeHtml(p.direccion)}</div>` : ''}
             ${p.metodoPago ? `<div><strong>💳 Pago:</strong> ${escapeHtml(p.metodoPago)}</div>` : ''}
           </div>` : ''}
-        <div class="pedido-total-row"><div class="pedido-total">${fmt(p.total)}</div>${p.entregado?'<span class="tag-entregado">✓ Entregado</span>':''}</div>`;
+        <div class="pedido-total-row"><div class="pedido-total">${fmt(p.total)}</div>${p.entregado?'<span class="tag-entregado">✓ Entregado</span>':''}</div>
+        <div class="pedido-footer-btns">
+          <button class="btn-imprimir-comanda" type="button" onclick="imprimirComanda(historialPedidos.find(x=>x.id===${p.id}))" aria-label="Imprimir comanda del pedido #${p.numero}">🖨️ Comanda</button>
+        </div>`;
       listEl.appendChild(card);
     });
   } catch { listEl.innerHTML='<div class="sin-pedidos">Error al cargar historial.</div>'; }

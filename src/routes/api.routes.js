@@ -1,9 +1,15 @@
-const { errorResult, sendJson, sendText } = require('../utils/http');
+const { errorResult, sendJson, sendText, getCorsHeaders } = require('../utils/http');
 const { handleApiRoute: dispatch } = require('./index');
 
 function respondApiResult(res, result) {
   if (!result) {
     sendJson(res, 404, { error: 'Ruta no encontrada' });
+    return;
+  }
+
+  if (Number(result.statusCode) === 304) {
+    res.writeHead(304, getCorsHeaders({ ...(result.headers || {}) }));
+    res.end();
     return;
   }
 

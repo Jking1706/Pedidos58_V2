@@ -171,6 +171,7 @@ function createRequestHandler({ authService = auth, apiHandler = handleApiRoute 
         body,
         res,
         requestId,
+        headers: req.headers,
       });
 
       respondApiResult(res, result);

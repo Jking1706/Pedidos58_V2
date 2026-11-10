@@ -872,6 +872,35 @@
   @media (prefers-reduced-motion: reduce) {
     *, *::before, *::after { animation: none !important; transition: none !important; }
   }
+
+  /* PEDIDO PENDIENTE (POS resiliente) — fijo sobre el todo */
+  .pedido-pendiente-banner { position: fixed; top: 14px; left: 50%; transform: translateX(-50%); width: min(640px, calc(100vw - 24px)); z-index: 9999; display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 12px; background: #FFF4CC; border: 1.5px solid #E0B100; border-radius: 12px; box-shadow: 0 6px 18px rgba(0,0,0,0.12); }
+  .pedido-pendiente-texto { flex: 1 1 100%; font-size: 0.85rem; font-weight: 800; color: #6B5200; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .pedido-pendiente-btn { border: 0; border-radius: 8px; padding: 6px 12px; font: inherit; font-size: 0.8rem; font-weight: 800; cursor: pointer; background: #181410; color: #fff; }
+  .pedido-pendiente-descartar { background: transparent; color: #181410; border: 1.5px solid #181410; }
+  @media (max-width: 600px) { .pedido-pendiente-texto { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; } }
+
+  /* TOGGLE IMPRIMIR COMANDA */
+  .pedido-print-toggle { display: flex; align-items: center; gap: 6px; font-size: 0.78rem; color: #4a453d; margin: 8px 2px; cursor: pointer; user-select: none; }
+  .pedido-print-toggle input { accent-color: var(--rojo); width: 16px; height: 16px; }
+  .btn-imprimir-comanda { background: #181410; color: #fff; border: 0; border-radius: 8px; padding: 6px 10px; font-size: 0.8rem; font-weight: 800; cursor: pointer; }
+
+  /* COMANDA DE COCINA (solo impresión) */
+  #comanda-print { display: none; }
+  @media print {
+    body > *:not(#comanda-print) { display: none !important; }
+    #comanda-print { display: block !important; margin: 0; padding: 8mm 6mm; font-family: 'Nunito', system-ui, sans-serif; color: #000; background: #fff; font-size: 12pt; }
+    .comanda-brand { font-family: 'Bebas Neue', Impact, sans-serif; letter-spacing: 2px; font-size: 18pt; border-bottom: 2pt solid #000; padding-bottom: 4pt; }
+    .comanda-num { font-size: 15pt; font-weight: 800; margin-top: 6pt; }
+    .comanda-meta { font-size: 10pt; color: #333; margin-bottom: 6pt; }
+    .comanda-line { font-size: 11pt; font-weight: 700; }
+    .comanda-items { width: 100%; border-collapse: collapse; margin: 8pt 0; font-size: 12pt; }
+    .comanda-items td { border-bottom: 1pt dashed #999; padding: 3pt 0; }
+    .comanda-qty { width: 34pt; font-weight: 800; }
+    .comanda-precio { text-align: right; font-variant-numeric: tabular-nums; }
+    .comanda-notas { font-size: 11pt; font-weight: 700; border: 1pt solid #000; padding: 4pt 6pt; margin-top: 6pt; }
+    .comanda-total { border-top: 2pt solid #000; font-size: 14pt; font-weight: 800; padding-top: 5pt; margin-top: 6pt; display: flex; justify-content: space-between; }
+  }
 </style>
 </head>
 <body>
@@ -961,6 +990,10 @@
         <span class="total-label">TOTAL</span>
         <span class="total-valor" id="total-valor">$0</span>
       </div>
+      <label class="pedido-print-toggle" id="imp-print-toggle" for="imp-print-checkbox">
+        <input type="checkbox" id="imp-print-checkbox" checked>
+        <span>⬇ Imprimir comanda al guardar</span>
+      </label>
       <button class="btn-confirmar" id="btn-guardar" onclick="confirmarPedido()">✅ Guardar pedido</button>
       <button class="btn-limpiar" onclick="limpiarCarrito()">✕ Limpiar carrito</button>
     </div>
@@ -1181,6 +1214,8 @@
     </article>
   </div>
 </section>
+
+<div id="comanda-print" aria-hidden="true"></div>
 
 <script src="/api-client.js"></script>
 <script src="/pos-core.js"></script>

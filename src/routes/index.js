@@ -18,9 +18,9 @@ const routeHandlers = [
   handleGoogleSheets,
 ];
 
-async function handleApiRoute({ method, pathname, query, body, res, requestId }) {
+async function handleApiRoute({ method, pathname, query, body, res, requestId, headers }) {
   for (const handler of routeHandlers) {
-    const result = await handler({ method, pathname, query, body, res, requestId });
+    const result = await handler({ method, pathname, query, body, res, requestId, headers });
     if (result) {
       return result;
     }

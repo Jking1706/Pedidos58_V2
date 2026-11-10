@@ -4,6 +4,18 @@ Contexto: la versión hoy en vivo (`pedidos58-v2.onrender.com`) es una build **a
 
 Prioridades con esfuerzo, impacto y evidencia. **P0 son bloqueadores**; **P1** usa el plazo; **P2** es mejora continua; **P3** es consolidación.
 
+## Estado de entregas (2026-11-10)
+
+| # | Mejora | Ubicación | Estado | Evidencia de verificación |
+|---|--------|-----------|--------|---------------------------|
+| D1 | **Cola de pedido pendiente offline**: si falla la red/fetch, el pedido se guarda en `localStorage['sabor58:pedido-pendiente-v1']` y se muestra un banner fijo y clicable con *"Reintentar"* / *"Descartar"*. El reintento verifica primero `GET /api/pedidos?fecha=…` para no duplicar (detecta por fingerprint `items+total+fecha+cliente+notas`); si ya existe, limpia el banner y muestra «El pedido #N ya estaba guardado». | `pos-pedidos.js`, `pos-ui.js`, `index.html` | Aplicada y verificada | Retry evita duplicados: tras inyectar un pending clon idéntico a pedido #1 (DB efímera) y pulsar Reintentar — banner desaparece y el POS muestra «El pedido #1 ya estaba guardado»; 57/57 tests verdes |
+| D2 | **Comanda imprimible**: `window.print()` con layout propio genera la comanda tras cada guardado (default ON) y con botón 🖨️ en cada tarjeta/historial. | `pos-pedidos.js`, `index.html` (`#comanda-print`) | Aplicada y verificada | Tras guardar, `window.__prints === 1` y el DOM contiene `PEDIDO #1 … TOTAL $10.000` |
+| D6 | **Caché del catálogo con ETag/304** (`W/"productos-<maxUpdated>-<count>-<active\|all>"`) con fallback al payload del localStorage cuando falla la red. | `pos-core.js`, `productos.controller.js`, `rutas/{productos,index,api}.js`, `server.js` | Aplicada y verificada | Primer `GET /api/productos` → 200 + `ETag`; cabecera `If-None-Match` → **304** con body vacío (verificado con probe `http` raw) |
+| D7 | **Pasada visual en navegador** | navegador | Parcial | Viewport mostrado ~800×621: el banner D4 queda fijo y clicable; **390px/1200px pendientes de verificación manual** (la herramienta disponible no permite cambiar viewport) |
+| — | **Fix crítico**: `routes/index.js` no propagaba `headers` al `context` de rutas → el `If-None-Match` nunca llegaba al controlador (causa del 304 roto). | `src/routes/index.js` | Corregido | — |
+
+Referencia de contexto para el flujo de transiciones (`Nuevo → En preparación → Listo`) y la nueva pestaña de cola: ver **`PLAN_COLA_PEDIDOS.md`**.
+
 ## P0 — Antes de abrir el sistema a cualquier usuario (2–3 días)
 
 | # | Acción | Responsable | Esfuerzo | Resultado verificable |
@@ -35,7 +47,7 @@ Secuencia recomendada de release: `0.1 → 0.2 → 0.3 → 0.4 → 0.5 → 0.6`.
 |---|--------|----------|-----------|
 | 2.1 | **Stock**: columna `stock`, descuento al confirmar pedido (con lock) y umbral mínimo por producto; ítems agotados se ocultan o marcan automáticamente | 2–3 días | Catálogo que refleja realidad operativa |
 | 2.2 | **Workflow de pedido**: `Nuevo → En preparación → Entregado` / `Cancelado`, con timestamps y auditoría; idempotente para reintentos (hoy `gasto_operaciones` ya funciona así para gastos; replicar patrón) | 2–4 días | Reiintentos de operador no duplican comandas |
-| 2.3 | **Comanda de cocina**: impresión PDF automática al guardar (botón imprimible; `window.print()` layout limpio) | 1–2 días | Cocina recibe pedido sin abrir el POS |
+| 2.3 | **Comanda de cocina**: impresión automática al guardar (botón imprimible; `window.print()` layout limpio). **Aplicada 2026-11-10** — auto-print activable con checkbox «⬇ Imprimir comanda al guardar»; reimprimir desde tarjetas del POS e historial | 1–2 días | Cocina recibe pedido sin abrir el POS |
 | 2.4 | **Márgenes de productos**: dashboard para utilidad por producto/rango, considerando `costo` corregido; objetivo entender qué eliminar del menú | 1 día | Decisión de carta en 5 min |
 | 2.5 | **Google Sheets → reporting plane**: si el POS escribe en Sheets, generar la vista "pedidos del día" para el encargado sin abrir el POS; si se hace inestable, reemplazar por endpoint + CSV paginado | 2–4 días | Encargado ve la operación sin tocar el POS |
 | 2.6 | **"Mi sesión" → estado de caja**: en una sola vista, `Activos/Total hoy/Caja pendiente`, accesible desde móvil para cierre rápido | 1 día | Cierre real en 2 min desde el celular del encargado |
@@ -45,7 +57,7 @@ Secuencia recomendada de release: `0.1 → 0.2 → 0.3 → 0.4 → 0.5 → 0.6`.
 | # | Acción | Esfuerzo | Resultado |
 |---|--------|----------|-----------|
 | 3.1 | **Eliminar `'unsafe-inline'` de `script-src`**: mover todos los inline JS a archivos externos (los admin pages aún los tienen); validar con CSP report-only primero | 2–4 días | XSS inline imposible por más que una inyección exista |
-| 3.2 | **PWA / offline-first**: cachear el catálogo más reciente y encolar pedidos pendientes (el POS ya tolera respuesta perdida; falta persistir la cola) | 3–5 días | Ventas no se pierden por corte de internet ni por caída de Neon |
+| 3.2 | **PWA / offline-first**: cachear el catálogo más reciente y encolar pedidos pendientes. **Parcial 2026-11-10** — cola persistente de un pedido pendiente en `localStorage` (reintento idempotente) y caché del catálogo con ETag/304; falta encolar múltiples pedidos, service worker y manifest | 3–5 días | Ventas no se pierden por corte de internet ni por caída de Neon |
 | 3.3 | **Observación de Neon**: dashboard de saturación de conexiones de pool y queries lentas (`pg_stat_statements`), con umbral | 1 día | Caídas por agotamiento de pool detectadas antes de ser incidentes |
 | 3.4 | **i18n** if expansion to other Venezuelan cities: move all strings into one module; simplify env. Effort no at this stage constraint | 3–5 días | Múltiples sedes con el mismo código |
 | 3.5 | **TEST más natural**: script `scripts/smoke.js` que valida el deploy completo tras merge a master (hoy se hacen a mano) | 1 día | Verificación de producción en 10 segundos |

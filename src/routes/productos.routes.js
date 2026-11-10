@@ -12,7 +12,7 @@ async function handleProductos(context) {
   const { method, pathname, query, body } = context;
 
   if (method === 'GET' && pathname === '/api/productos') {
-    return productosController.getProductos(query);
+    return productosController.getProductos(query, context.headers || {});
   }
 
   if (method === 'GET' && /^\/api\/productos\/\d+$/.test(pathname)) {
