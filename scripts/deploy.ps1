@@ -1,29 +1,27 @@
 #!/usr/bin/env pwsh
-# Deploy script for Sabor +58 — publishes the current working tree to production.
-# Usage: .\scripts\deploy.ps1 [-Commit] [-Push] [-NoTest]
+# Deploy script for Sabor +58 - publishes the current working tree to production.
+# Usage: .\scripts\deploy.ps1 [-Commit] [-Push] [-NoTest] [-Help]
 #
-# WARNING: This script does NOT touch Neon (database) or .env by default.
+# WARNING: This script does NOT touch Neon (database) or .env.
 # The deploy only commits + pushes code; database migrations must be applied
 # separately with explicit consent.
+#
+# Exit codes: 0 = success, 1 = test failure, 2 = sanity check failed, 3 = git error
 
-# --------------------------------------------------
-# Parse parameters
-# --------------------------------------------------
 [CmdletBinding()]
 param(
     [Switch]$Commit,
     [Switch]$Push,
-    [Switch]$NoTest
+    [Switch]$NoTest,
+    [Switch]$Help
 )
 
-$VerbosePreference = 'SilentlyContinue'
-
-function Write-Good { Write-Host "$using:Green [deploy] $args" -ForegroundColor $using:Green }
-function Write-Warn { Write-Host "$using:Yellow [deploy] $args" -ForegroundColor $using:Yellow }
-function Write-Err  { Write-Host "$using:Red [deploy] $args"   -ForegroundColor $using:Red }
+function Write-Good { param([string]$Message) Write-Host "[deploy] $Message" -ForegroundColor Green }
+function Write-Warn { param([string]$Message) Write-Host "[deploy] $Message" -ForegroundColor Yellow }
+function Write-Err  { param([string]$Message) Write-Host "[deploy] $Message" -ForegroundColor Red }
 
 function Usage {
-    $help = @"
+    @"
 Usage: .\scripts\deploy.ps1 [-Commit] [-Push] [-NoTest] [-Help]
 
 Options:
@@ -34,27 +32,15 @@ Options:
 
 Examples:
   .\scripts\deploy.ps1                  # dry run: tests only, no commit/push
-  .\scripts\deploy.ps1 -Commit -Push   # full publish: tests → commit → push
+  .\scripts\deploy.ps1 -Commit -Push   # full publish: tests, commit, push
 "@
-    $help
     exit 0
 }
 
-# Parse named parameters manually (simple approach)
-$argsRemaining = @()
-for ($i = 0; $i -lt $args.Count; $i++) {
-    switch -regex $args[$i] {
-        '^-Commit$'    { $Commit=$true; continue }
-        '^-Push$'      { $Push=$true; continue }
-        '^-NoTest$'    { $NoTest=$true; continue }
-        '^-Help$'|'^-?' { Usage; continue }
-        default        { $argsRemaining += $args[$i]; continue }
-    }
-}
-if ($argsRemaining.Contains('Help')) { Usage }
+if ($Help) { Usage }
 
-$ROOT = Split-Path (Get-Location -PSParentPath).Path -Parent
-$ROOT = [io]::Path::GetFullPath("$ROOT/..")
+$ErrorActionPreference = 'Stop'
+$ROOT = Split-Path -Parent $PSScriptRoot
 Set-Location $ROOT
 
 # --------------------------------------------------
@@ -62,17 +48,14 @@ Set-Location $ROOT
 # --------------------------------------------------
 if (-not $NoTest) {
     Write-Good "Running test suite..."
-    $testResult = npm test 2>&1
-    $passCount = ($testResult | Select-String 'pass \d').Matches.Groups[1].Value
-    $failCount = ($testResult | Select-String 'fail \d').Matches.Groups[1].Value
-    Write-Good "Tests: $passCount passed, $failCount failed"
-
-    if ($failCount -gt 0) {
-        Write-Err "Tests failed — aborting deploy"
+    npm test | Out-Host
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "Tests failed - aborting deploy"
         exit 1
     }
+    Write-Good "Tests passed"
 } else {
-    Write-Warn "Tests skipped (–NoTest)"
+    Write-Warn "Tests skipped (-NoTest)"
 }
 
 # --------------------------------------------------
@@ -80,87 +63,66 @@ if (-not $NoTest) {
 # --------------------------------------------------
 Write-Good "Running sanity checks..."
 
-# Check for PowerShell-style corruption ($' trailing content)
-$corruptFiles = @()
-Get-ChildItem -Recurse -Include *.js,*.html,*.md . |
-    Where-Object { $_.FullName -notmatch '\.impeccable' -and $_.FullName -notmatch 'node_modules' } |
-    ForEach-Object {
-        $content = Get-Content $_.FullName -Raw
-        # Look for the "$' pattern that PowerShell bug introduced
-        if ($content -match '\$') {
-            # Quick heuristic: the file has been modified via PowerShell replacement strings
-            # Check specifically for the COP→es-VE replacement pattern duplication
-            if ($content -match "minimumFractionDigits: 0, maximumFractionDigits: 2\)\.format\(Number\(value\) \|\| 0\)") {
-                $corruptFiles += $_.FullName
-            }
-        }
-    }
+# Scan for leaked secrets (api keys, private keys) in tracked + untracked working files.
+$secretHits = @()
+$candidates = Get-ChildItem -Recurse -File -Include *.js,*.html,*.md,*.json,*.sh,*.ps1,*.yml,*.yaml . |
+    Where-Object { $_.FullName -notmatch '\\node_modules\\|\\.git\\|\\.impeccable\\' -and $_.FullName -notmatch '\\.env$' } |
+    Select-String -Pattern 'rnd_[A-Za-z0-9]{20,}|sk-[A-Za-z0-9]{20,}|BEGIN [A-Z ]*PRIVATE KEY' -List -ErrorAction SilentlyContinue
+foreach ($hit in $candidates) { $secretHits += $hit.Path }
+$secretHits = $secretHits | Sort-Object -Unique
 
-if ($corruptFiles.Count -gt 0) {
-    Write-Err "Corrupt files detected (PowerShell $' bug): $($corruptFiles -join ', ')"
+if ($secretHits.Count -gt 0) {
+    Write-Err "Possible secrets found in files: $($secretHits -join ', ')"
     exit 2
 }
 
-# Check for mojibake-style UTF-8 bytes (simplified: look for common broken chars)
-$mojibakeFiles = @()
-Get-ChildItem -Recurse -Include *.js,*.html,*.md . |
-    Where-Object { $_.FullName -notmatch '\.impeccable' -and $_.FullName -notmatch 'node_modules' } |
-    ForEach-Object {
-        $content = Get-Content $_.FullName -Raw
-        # Look for typical UTF-8 mojibake sequences
-        if ($content -match 'ÃÂ­|ÃÂ©|ÃÂ±') {
-            $mojibakeFiles += $_.FullName
-        }
-    }
-
-if ($mojibakeFiles.Count -gt 0) {
-    Write-Err "Mojibake files detected: $($mojibakeFiles -join ', ')"
+# Block .env from ever entering the index
+if ((git ls-files --error-unmatch .env 2>$null)) {
+    Write-Err ".env is tracked by git - refusing to continue"
     exit 2
 }
 
-Write-Good "Sanity checks passed ✓"
+Write-Good "Sanity checks passed"
 
 # --------------------------------------------------
 # 3. Commit (optional)
 # --------------------------------------------------
 if ($Commit) {
     Write-Good "Staging changes..."
-    git Add -Path . -ErrorAction Stop
+    git add -A
+    if ($LASTEXITCODE -ne 0) { Write-Err "git add failed"; exit 3 }
 
     $timestamp = (Get-Date).ToUniversalTime().ToString("yyyy-MM-ddTHH-mm-ssZ")
-    $commitMsg = "deploy: $timestamp
-
-- Dropdown de método de pago: fix de contraste en <option>
-- Cola: FIFO + aging badges + legibilidad de cocina
-- Cierre de caja: panel pre-cierre vivo + confirmación de dos pasos
-- Localización: es-VE / America/Caracas (no rieles de pago)"
-
-    $commitResult = git Commit -Message $commitMsg -ErrorAction Stop
-    Write-Good "Committed ✓"
+    git commit -m "deploy: $timestamp" | Out-Host
+    if ($LASTEXITCODE -ne 0) { Write-Err "git commit failed (nothing to commit?)"; exit 3 }
+    Write-Good "Committed"
 } else {
-    Write-Warn "Skipping commit (–Commit not set)"
+    Write-Warn "Skipping commit (-Commit not set)"
 }
 
 # --------------------------------------------------
 # 4. Push (optional)
 # --------------------------------------------------
 if ($Push) {
-    if (-not (git Remote Get-UniqueUrl origin -ErrorAction SilentlyContinue)) {
-        Write-Err "No remote 'origin' configured — cannot push"
-        exit 2
+    git remote get-url origin | Out-Null
+    if ($LASTEXITCODE -ne 0) {
+        Write-Err "No remote 'origin' configured - cannot push"
+        exit 3
     }
 
-    $branch = git Branch -tracking | Where-Object { $_.Label -match '\\* (.+)' } | ForEach-Object { $_.Matches.Groups[1].Value }
+    $branch = git rev-parse --abbrev-ref HEAD
     Write-Good "Pushing to $branch..."
-    git Push Origin $branch -ErrorAction Stop
-    Write-Good "Pushed ✓"
+    git push origin $branch | Out-Host
+    if ($LASTEXITCODE -ne 0) { Write-Err "git push failed"; exit 3 }
+    Write-Good "Pushed"
 } else {
-    Write-Warn "Skipping push (–Push not set)"
+    Write-Warn "Skipping push (-Push not set)"
 }
 
 # --------------------------------------------------
 # 5. Summary
 # --------------------------------------------------
 Write-Good "Deploy summary:"
-git Status --short
-Write-Host "`nDone." -ForegroundColor $using:Green
+git status --short | Out-Host
+Write-Host "`nDone." -ForegroundColor Green
+exit 0
