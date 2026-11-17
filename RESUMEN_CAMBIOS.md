@@ -49,6 +49,7 @@
 - El admin de producción quedó creado (única copia de la password: `.env` local). Recomendado: cambiarla al entrar y agregar `AUTH_ADMIN_USER`/`AUTH_ADMIN_PASSWORD` como env vars en Render como respaldo.
 - La BD de producción (Neon) es la misma que usa el entorno local: cuidado al correr servidores o migraciones locales.
 - Render MCP sigue sin autorización en la sesión de OpenCode porque el proceso arrancó antes de que `RENDER_API_KEY` existiera como variable de usuario. Reiniciar OpenCode para reconectarlo.
+- 2026-11-17 (tarde): el usuario pidió sincronizar su nueva contraseña de `.env` con la BD. La suya tenía 10 caracteres (< 12 que exige `hashPassword`), se generó una robusta (28 chars, solo en `.env`) y se actualizó el hash en `empleados`. Verificado extremo a extremo: health OK, login 200, `/api/auth/me` = admin. Scripts temporales de la operación borrados.
 
 ## Estado del git
 - Commits locales en `master`: `ef0f5e3` (fix tests) y `85517aa` (feat pos + Render MCP). NO empujados: `master` va 2 commits sobre `origin/master` (`d08ef66`).
