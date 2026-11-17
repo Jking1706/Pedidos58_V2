@@ -8,6 +8,7 @@ const pool = {
 require.cache[require.resolve('../src/database/connection')] = { exports: { pool } };
 
 const { handleApiRoute } = require('../src/routes/api.routes');
+const { formatIsoDate } = require('../src/services/reporting.utils');
 const { handleCaja } = require('../src/routes/caja.routes');
 const { handleGastos } = require('../src/routes/gastos.routes');
 const { handleProductos } = require('../src/routes/productos.routes');
@@ -47,7 +48,7 @@ test('handleCaja responde la caja del día', async () => {
 
   const result = await handleCaja(context('/api/caja'));
   assert.equal(result.statusCode, 200);
-  assert.equal(result.payload.fecha, '2026-11-10');
+  assert.equal(result.payload.fecha, formatIsoDate());
 });
 
 test('handleCaja cierra una fecha sin caja registrada', async () => {
