@@ -109,6 +109,15 @@
     .status.ok { color: #15803d; }
     .status.error { color: #b91c1c; }
 
+    .pre-close { display: grid; gap: 6px; margin-top: 12px; padding: 14px; border-radius: 14px; background: #fffdf0; border: 1.5px dashed #E0B100; }
+    .pre-close-title { font-family: 'Bebas Neue', sans-serif; letter-spacing: 1px; color: var(--negro); font-size: 1rem; text-transform: uppercase; }
+    .pre-close-row { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; font-size: 0.88rem; font-weight: 700; color: #3a322a; }
+    .pre-close-row.total { border-top: 1.5px solid rgba(15, 15, 15, 0.12); padding-top: 6px; }
+    .pre-close-row.total strong { color: var(--azul); font-size: 1.02rem; }
+    .pre-close-row strong { font-variant-numeric: tabular-nums; }
+    .pre-close-row.diff strong { color: var(--verde); }
+    .pre-close-row.diff.en-contra strong { color: var(--rojo); }
+
     .history-card {
       margin-top: 18px;
     }
@@ -193,6 +202,20 @@
             </label>
           </div>
 
+          <div class="pre-close" id="pre-close" hidden>
+            <div class="pre-close-title">Pre-cierre — verifica antes de guardar</div>
+            <div class="pre-close-row"><span>Apertura</span><strong id="pc-inicial">—</strong></div>
+            <div class="pre-close-row"><span>Ventas acumuladas</span><strong id="pc-ventas">—</strong></div>
+            <div class="pre-close-row"><span>Gastos acumulados</span><strong id="pc-gastos">—</strong></div>
+            <div class="pre-close-row total"><span>Final esperado</span><strong id="pc-final">—</strong></div>
+            <label class="field" style="margin-top:6px;">
+              <span>Efectivo físico contado (opcional)</span>
+              <input id="conteo-fisico" type="number" min="0" step="0.01" inputmode="decimal" autocomplete="off" placeholder="Ej: 320000" />
+            </label>
+            <div class="pre-close-row diff" id="pc-diff-row" hidden><span>Diferencia físico − final</span><strong id="pc-diff">—</strong></div>
+            <p class="muted" style="margin-top:4px;">El cierre queda guardado y <strong>no puede deshacerse</strong>. Cuenta el efectivo antes de cerrar.</p>
+          </div>
+
           <div class="state-badge off" id="state-badge">Sin caja</div>
           <div class="muted" id="state-text">La caja del día no está abierta todavía.</div>
           <div class="toolbar">
@@ -262,20 +285,30 @@
 
     let currentCaja = null;
     let currentResumen = null;
+    let currentFinalEsperado = 0;
+
+    const preClose = document.getElementById('pre-close');
+    const pcInicial = document.getElementById('pc-inicial');
+    const pcVentas = document.getElementById('pc-ventas');
+    const pcGastos = document.getElementById('pc-gastos');
+    const pcFinal = document.getElementById('pc-final');
+    const pcDiffRow = document.getElementById('pc-diff-row');
+    const pcDiff = document.getElementById('pc-diff');
+    const conteoInput = document.getElementById('conteo-fisico');
 
     function todayIso() {
       return ReportTools.today();
     }
 
     function money(value) {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+      return '$' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
     }
 
     function formatDate(value) {
       if (!value) return '—';
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return String(value);
-      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+      return new Intl.DateTimeFormat('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
     function esc(value) {
@@ -313,6 +346,36 @@
       };
     }
 
+    function finalEsperadoRaw(resumen, caja) {
+      return Number(resumen?.monto_final_estimado ?? caja?.monto_final_calculado ?? 0) || 0;
+    }
+
+    function renderDiff() {
+      const raw = conteoInput ? conteoInput.value.trim() : '';
+      if (raw === '') { pcDiffRow.hidden = true; pcDiffRow.classList.remove('en-contra'); return; }
+      const conteo = Number(raw);
+      if (!Number.isFinite(conteo)) { pcDiffRow.hidden = true; return; }
+      const diff = conteo - currentFinalEsperado;
+      pcDiffRow.hidden = false;
+      pcDiff.textContent = (diff >= 0 ? '+' : '−') + money(Math.abs(diff));
+      pcDiffRow.classList.toggle('en-contra', diff < 0);
+    }
+
+    function renderPreClose(resumen, caja) {
+      const show = Boolean(caja) && caja.estado === 'abierta';
+      if (preClose) preClose.hidden = !show;
+      if (!show) return;
+      const inicial = Number(resumen?.monto_inicial ?? caja?.monto_inicial ?? 0) || 0;
+      const ventas = Number(resumen?.ventas ?? 0) || 0;
+      const gastos = Number(resumen?.gastos ?? 0) || 0;
+      currentFinalEsperado = finalEsperadoRaw(resumen, caja);
+      pcInicial.textContent = money(inicial);
+      pcVentas.textContent = money(ventas);
+      pcGastos.textContent = money(gastos);
+      pcFinal.textContent = money(currentFinalEsperado);
+      renderDiff();
+    }
+
     function renderSummary(resumen, caja) {
       const fecha = resumen?.fecha || fechaInput.value;
       const estado = caja?.estado || 'sin caja';
@@ -337,6 +400,7 @@
       openBtn.disabled = Boolean(caja);
       closeBtn.disabled = !caja || caja.estado !== 'abierta';
       montoInicialInput.disabled = Boolean(caja);
+      renderPreClose(resumen, caja);
     }
 
     function renderHistory(historial) {
@@ -374,6 +438,7 @@
         const data = await apiJson(`${API}/caja?fecha=${encodeURIComponent(fechaInput.value)}`);
         currentCaja = normalizeCaja(data.caja);
         currentResumen = data.resumen || null;
+        if (conteoInput) conteoInput.value = '';
         renderSummary(currentResumen, currentCaja);
         if (currentCaja?.estado === 'cerrada') {
           stateText.textContent = `Cierre guardado: ${money(currentCaja.monto_final)}. Diferencia con movimientos actuales: ${money(data.diferencia_desde_cierre)}.`;
@@ -420,8 +485,25 @@
     }
 
     async function closeCaja() {
-      if (!window.confirm('¿Cerrar la caja de esta fecha?')) {
+      const fecha = fechaInput.value;
+      const raw = conteoInput ? conteoInput.value.trim() : '';
+      const conteo = raw === '' ? null : Number(raw);
+      const diff = (conteo === null || !Number.isFinite(conteo)) ? null : conteo - currentFinalEsperado;
+      const moneyTxt = {
+        inicial: money(currentResumen?.monto_inicial ?? currentCaja?.monto_inicial ?? 0),
+        ventas: money(currentResumen?.ventas ?? 0),
+        gastos: money(currentResumen?.gastos ?? 0),
+        final: money(currentFinalEsperado),
+      };
+      let mensaje = `¿Cerrar la caja del ${formatDate(fecha)}?\n\nApertura: ${moneyTxt.inicial}\nVentas: ${moneyTxt.ventas}\nGastos: ${moneyTxt.gastos}\nFinal esperado: ${moneyTxt.final}`;
+      if (diff !== null) mensaje += `\nEfectivo físico: ${money(conteo)}\nDiferencia: ${(diff >= 0 ? '+' : '−') + money(Math.abs(diff))}`;
+      mensaje += `\n\nEl cierre queda guardado y no puede deshacerse. ¿Confirmas?`;
+      if (!window.confirm(mensaje)) {
         return;
+      }
+      if (diff !== null && Math.abs(diff) >= 1) {
+        const extra = window.confirm(`Atención: la diferencia es ${(diff >= 0 ? '+' : '−') + money(Math.abs(diff))}. ¿Cerrar igualmente?`);
+        if (!extra) return;
       }
 
       try {
@@ -444,6 +526,7 @@
     openBtn.addEventListener('click', () => void openCaja());
     closeBtn.addEventListener('click', () => void closeCaja());
     fechaInput.addEventListener('change', () => void loadCaja());
+    if (conteoInput) conteoInput.addEventListener('input', renderDiff);
 
     void loadCaja();
   </script>

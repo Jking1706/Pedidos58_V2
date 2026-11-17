@@ -402,14 +402,14 @@
     }
 
     function money(value) {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+      return '$' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
     }
 
     function formatDate(value) {
       if (!value) return '—';
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return String(value);
-      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+      return new Intl.DateTimeFormat('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
     function esc(value) {

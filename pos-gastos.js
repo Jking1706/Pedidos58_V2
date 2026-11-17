@@ -43,7 +43,7 @@ async function enviarGasto() {
     total: monto,
     metodoPago,
     fecha: fechaHoy(),
-    hora: new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' }),
+    hora: new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }),
   };
 
   if (gastoButton) {
@@ -136,7 +136,7 @@ async function registrarCompraGastos() {
 
   const metodoPago = gastoCompraMetodoPagoSelect?.value.trim() || '';
   const fecha = fechaHoy();
-  const hora = new Date().toLocaleTimeString('es-CO', { hour: '2-digit', minute: '2-digit' });
+  const hora = new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' });
 
   const datos = {
     tipoEntrada: 'gasto_carrito',

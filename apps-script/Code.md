@@ -6,7 +6,7 @@
 const SHEET_NAME = 'Pedidos_58';
 const GASTOS_SHEET_NAME = 'Gastos_58';
 const CATALOGO_SHEET_NAME = 'Catalogo_Insumos';
-const TIME_ZONE = 'America/Bogota';
+const TIME_ZONE = 'America/Caracas';
 const HEADERS = [
   'Fecha',
   'Pedido #',

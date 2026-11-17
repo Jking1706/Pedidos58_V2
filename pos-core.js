@@ -1,7 +1,7 @@
-const fmt = n => '$' + n.toLocaleString('es-CO');
+const fmt = n => '$' + n.toLocaleString('es-VE');
 
 function fechaHoy() {
-  return new Intl.DateTimeFormat('en-GB', { timeZone: window.__BUSINESS_TIME_ZONE__ || 'America/Bogota', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
+  return new Intl.DateTimeFormat('en-GB', { timeZone: window.__BUSINESS_TIME_ZONE__ || 'America/Caracas', day: '2-digit', month: '2-digit', year: 'numeric' }).format(new Date());
 }
 
 function escapeHtml(value) {

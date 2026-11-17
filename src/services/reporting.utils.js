@@ -2,7 +2,7 @@ const ISO_DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 
 function businessDate(now = new Date()) {
   const parts = new Intl.DateTimeFormat('en-CA', {
-    timeZone: process.env.BUSINESS_TIME_ZONE || 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit',
+    timeZone: process.env.BUSINESS_TIME_ZONE || 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit',
   }).formatToParts(now);
   const part = (type) => Number(parts.find((item) => item.type === type).value);
   return new Date(part('year'), part('month') - 1, part('day'));

@@ -22,7 +22,7 @@ function serveFile(res, filePath, contentType, protectedPage = false) {
     }
 
     res.writeHead(200, { 'Content-Type': contentType });
-    const timezone = JSON.stringify(process.env.BUSINESS_TIME_ZONE || 'America/Bogota').replace(/</g, '\\u003c');
+    const timezone = JSON.stringify(process.env.BUSINESS_TIME_ZONE || 'America/Caracas').replace(/</g, '\\u003c');
     res.end(protectedPage ? data.toString('utf8').replace('</head>', `<script>window.__BUSINESS_TIME_ZONE__ = ${timezone};</script><script src="/auth-client.js" defer></script></head>`) : data);
   });
 }

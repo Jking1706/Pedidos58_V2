@@ -36,6 +36,37 @@ async function apiFetch(url, options) {
 
 function tsSafe(value) { return Number(value) || 0; }
 
+// Minutos transcurridos desde la hora del pedido (12h "3:45 p. m." / 24h "15:20") el día de hoy.
+// La Cola solo muestra pedidos del día, así que asumir "hoy" es seguro.
+// RECONSTRUIDO 2026-11-17: el blob intermedio solo soportaba formato 24h; se rehízo el parse 12h según la spec de RESUMEN_CAMBIOS.md.
+function minutosDesde(hora) {
+  if (!hora || typeof hora !== 'string') return null;
+  const t = hora.trim();
+  const m = t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\s*([aApP])[\s.]*[mM]\.?$/);
+  const m24 = !m && t.match(/^(\d{1,2}):(\d{2})(?::\d{2})?\.?$/);
+  if (!m && !m24) return null;
+  let h = Number((m || m24)[1]) || 0;
+  const min = Number((m || m24)[2]) || 0;
+  if (m) {
+    const isPm = m[3].toLowerCase() === 'p';
+    if (isPm && h < 12) h += 12;
+    if (!isPm && h === 12) h = 0;
+  }
+  if (h > 23 || min > 59) return null;
+  const d = new Date();
+  d.setHours(h, min, 0, 0);
+  const diff = Math.floor((Date.now() - d.getTime()) / 60000);
+  return Number.isNaN(diff) ? null : Math.max(0, diff);
+}
+
+function agingInfo(hora) {
+  const min = minutosDesde(hora);
+  if (min === null) return { level: null, min: null };
+  if (min >= 15) return { level: 'late', min };
+  if (min >= 10) return { level: 'warn', min };
+  return { level: 'ok', min };
+}
+
 function itemText(pedido) {
   const items = Array.isArray(pedido.items) ? pedido.items : [];
   return items.map((it) => (it && it.nombre ? `${Number(it.qty) || 1}× ${escapeHtml(it.nombre)}` : '')).filter(Boolean).join(', ');
@@ -57,9 +88,13 @@ function colaCard(pedido) {
     [COLA_ESTADO_LISTO]: '<span class="cola-dot" style="background:#168443"></span>',
   };
   const dot = dots[pedido.estado] || '';
-  return `<article class="cola-card" data-pedido-id="${pedido.id}" data-estado="${escapeHtml(pedido.estado)}">
+  const aging = agingInfo(pedido.hora);
+  const agingBadge = aging.level
+    ? `<span class="cola-aging ${aging.level}" aria-label="${aging.min} minutos en cola">${aging.min} min</span>`
+    : '';
+  return `<article class="cola-card" data-pedido-id="${pedido.id}" data-estado="${escapeHtml(pedido.estado)}"${aging.level && aging.level !== 'ok' ? ` data-aging="${aging.level}"` : ''}>
     <div class="cola-card-top">
-      <span class="cola-card-numero">${dot}#${Number(pedido.numero) || 0}</span>
+      <span class="cola-card-numero">${dot}#${Number(pedido.numero) || 0}${agingBadge}</span>
       <span class="cola-card-hora">${escapeHtml(String(pedido.hora || ''))}</span>
     </div>
     <div class="cola-card-items">${escapeHtml(itemText(pedido)) || 'Sin items'}</div>
@@ -80,7 +115,7 @@ function renderCola(data) {
     if (buckets[pedido.estado]) buckets[pedido.estado].push(pedido);
   }
   for (const key of Object.keys(buckets)) {
-    buckets[key].sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+    buckets[key].sort((a, b) => (Number(a.id) || 0) - (Number(b.id) || 0));
   }
   const set = (id, list) => { const el = document.getElementById(id); if (el) el.innerHTML = list.map(colaCard).join(''); };
   set('cola-list-new', buckets[COLA_ESTADO_NUEVO]);

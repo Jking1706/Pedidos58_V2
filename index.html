@@ -69,6 +69,8 @@
   }
   .app-tab:hover { transform: translateY(-1px); }
   .app-tab.is-active { background: var(--amarillo); color: var(--negro); border-color: transparent; }
+  a.app-tab { text-decoration: none; display: inline-flex; align-items: center; }
+  a.app-tab:focus-visible, .app-tab:focus-visible { outline: 2px solid var(--amarillo); outline-offset: 2px; }
 
   .tab-panel { display: none; }
   .tab-panel.is-active { display: block; }
@@ -120,6 +122,8 @@
     letter-spacing: 0.7px;
     text-transform: uppercase;
     margin-bottom: 8px;
+    background: #181410;
+    color: #F5C518;
   }
   .section-pill-gastos {
     background: rgba(207, 23, 32, 0.1);
@@ -254,7 +258,6 @@
     border-color: var(--azul);
     box-shadow: 0 0 0 4px rgba(0, 48, 135, 0.08);
   }
-  .gasto-card .pedido-campo option { color: var(--negro); }
   .gasto-card select.pedido-campo {
     appearance: none;
     background-image:
@@ -618,6 +621,10 @@
   }
   .pedido-campo::placeholder { color: rgba(255,255,255,0.35); }
   .pedido-campo:focus { border-color: var(--amarillo); }
+  /* Las <option> heredan color:white del panel oscuro y quedan invisibles
+     sobre el fondo claro nativo del desplegable — se fuerza contraste. */
+  .pedido-campo option,
+  .gasto-card .pedido-campo option { background: #ffffff; color: var(--negro); }
 
   .carrito-items { flex: 1; overflow-y: auto; padding: 10px 12px 12px; }
   .carrito-items::-webkit-scrollbar { width: 4px; }
@@ -902,7 +909,8 @@
     .comanda-total { border-top: 2pt solid #000; font-size: 14pt; font-weight: 800; padding-top: 5pt; margin-top: 6pt; display: flex; justify-content: space-between; }
   }
 /* Cola de pedidos */
-.cola-shell { background: var(--crema); } display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; padding: 16px 18px 8px; flex-wrap: wrap; }
+.cola-shell { background: var(--crema); }
+.cola-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 14px; margin-bottom: 14px; flex-wrap: wrap; }
 .cola-head h2, .cola-head h3 { font-weight: 800; color: #181410; }
 .cola-toolbar { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; }
 .btn-cola-toolbar { border: 1px solid #d8d2c8; border-radius: 8px; background: #fff; padding: 6px 12px; font: inherit; font-size: 0.8rem; font-weight: 700; cursor: pointer; }
@@ -916,11 +924,18 @@
 .cola-card { background: #fff; border: 1px solid #e6e0d4; border-left: 4px solid #E0B100; border-radius: 10px; padding: 10px 12px; font-family: 'Nunito', sans-serif; }
 .cola-card-top { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; margin-bottom: 4px; }
 .cola-dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; margin-right: 6px; vertical-align: 0; }
-.cola-card-numero { font-weight: 800; color: #181410; font-variant-numeric: tabular-nums; }
-.cola-card-hora { font-weight: 700; color: #6b5200; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
-.cola-card-items { font-size: 0.78rem; color: #3a322a; margin: 2px 0 6px; }
-.cola-card-total { color: #cf1720; font-weight: 800; font-size: 0.82rem; font-variant-numeric: tabular-nums; }
-.cola-card-meta { font-size: 0.74rem; color: #9b8d76; word-break: break-all; }
+.cola-card-numero { font-family: 'Bebas Neue', Impact, sans-serif; font-size: 1.45rem; letter-spacing: 0.6px; font-weight: 400; color: #181410; font-variant-numeric: tabular-nums; line-height: 1; }
+.cola-card-hora { font-weight: 800; color: #6b5200; font-size: 0.9rem; font-variant-numeric: tabular-nums; }
+.cola-card-items { font-size: 1rem; font-weight: 700; line-height: 1.4; color: #241f1a; margin: 4px 0 6px; }
+.cola-card-total { color: #cf1720; font-weight: 800; font-size: 0.95rem; font-variant-numeric: tabular-nums; }
+.cola-card-meta { font-size: 0.82rem; font-weight: 600; color: #7a6f5c; overflow-wrap: anywhere; }
+.cola-aging { display: inline-flex; align-items: center; gap: 4px; margin-left: 8px; padding: 2px 10px 3px; border-radius: 999px; font-size: 0.74rem; font-weight: 800; font-variant-numeric: tabular-nums; vertical-align: 2px; background: #e9e5dc; color: #4b4438; }
+.cola-aging.warn { background: #FFF3CD; color: #8A6D00; border: 1.5px solid #E0B100; }
+.cola-aging.late { background: #CF1720; color: #ffffff; border: 1.5px solid #AD0D14; animation: colaLateBlink 0.9s steps(2, end) infinite; }
+.cola-card[data-aging="warn"] { border-left-color: #E0B100; }
+.cola-card[data-aging="late"] { border-left-color: #CF1720; border-color: rgba(207, 23, 32, 0.45) #CF1720; border-width: 1.5px 1.5px 1.5px 6px; background: #FFF4ED; }
+@keyframes colaLateBlink { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@media (prefers-reduced-motion: reduce) { .cola-aging.late { animation: none; } }
 .cola-actions { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 8px; }
 .btn-cola-accion { border: none; border-radius: 7px; padding: 6px 12px; font: inherit; font-size: 0.78rem; font-weight: 800; cursor: pointer; }
 .btn-cola-accion.prep-btn { background: var(--rojo); color: #fff; }
@@ -932,7 +947,9 @@
   .cola-shell .cola-head { flex-direction: column; }
 }
 @media (max-width: 480px) {
-  .cola-card-numero, .cola-card-total { font-size: 0.72rem; }
+  .cola-card-numero { font-size: 1.2rem; }
+  .cola-card-items { font-size: 0.95rem; }
+  .cola-aging { font-size: 0.68rem; padding: 2px 8px; }
 }
 </style>
 </head>
@@ -953,6 +970,7 @@
     <button class="app-tab" type="button" data-tab-target="cola">Cola</button>
     <button class="app-tab" type="button" data-tab-target="gastos">Gastos</button>
     <button class="app-tab" type="button" data-tab-target="dashboard">Dashboard</button>
+    <a class="app-tab" href="/admin-caja" aria-label="Abrir cierre de caja del día">💵 Cierre de caja</a>
   </nav>
 </header>
 

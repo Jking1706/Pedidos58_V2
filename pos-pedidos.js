@@ -245,7 +245,7 @@ async function confirmarPedido() {
   if (!items.length) { mostrarToast('⚠️ El carrito está vacío'); return; }
   const total = calcTotal();
   const datosPedido = leerDatosPedido();
-  const hora = new Date().toLocaleTimeString('es-CO',{timeZone: window.__BUSINESS_TIME_ZONE__ || 'America/Bogota', hour:'2-digit',minute:'2-digit'});
+  const hora = new Date().toLocaleTimeString('es-VE',{timeZone: window.__BUSINESS_TIME_ZONE__ || 'America/Caracas', hour:'2-digit',minute:'2-digit'});
   const fecha = fechaHoy();
   const payload = {
     numero: pedidoCount + 1,

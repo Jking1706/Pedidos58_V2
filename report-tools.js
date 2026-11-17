@@ -32,7 +32,7 @@
     return pending;
   }
   function today(now = new Date()) {
-    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: root.__BUSINESS_TIME_ZONE__ || 'America/Bogota', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
+    const parts = new Intl.DateTimeFormat('en-CA', { timeZone: root.__BUSINESS_TIME_ZONE__ || 'America/Caracas', year: 'numeric', month: '2-digit', day: '2-digit' }).formatToParts(now);
     const get = (type) => parts.find((part) => part.type === type).value;
     return `${get('year')}-${get('month')}-${get('day')}`;
   }

@@ -614,22 +614,22 @@
       if (!value) return '—';
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return String(value);
-      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
+      return new Intl.DateTimeFormat('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }).format(date);
     }
 
     function formatChartDate(value) {
       if (!value) return '';
       const date = new Date(`${value}T00:00:00`);
       if (Number.isNaN(date.getTime())) return String(value);
-      return new Intl.DateTimeFormat('es-CO', { day: '2-digit', month: '2-digit' }).format(date);
+      return new Intl.DateTimeFormat('es-VE', { day: '2-digit', month: '2-digit' }).format(date);
     }
 
     function money(value) {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+      return '$' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
     }
 
     function count(value) {
-      return new Intl.NumberFormat('es-CO').format(Number(value) || 0);
+      return new Intl.NumberFormat('es-VE').format(Number(value) || 0);
     }
 
     function esc(value) {
@@ -1058,7 +1058,7 @@
         doc.setTextColor(255, 255, 255);
         doc.setFontSize(11);
         doc.text('Resumen financiero', 14, 24);
-        doc.text(`Generado: ${new Date().toLocaleString('es-CO')}`, 130, 15);
+        doc.text(`Generado: ${new Date().toLocaleString('es-VE')}`, 130, 15);
         doc.text(`Periodo: ${rangeFrom.value} a ${rangeTo.value}`, 14, 30);
 
         const cards = [
@@ -1174,7 +1174,7 @@
         }
 
         const now = new Date();
-        const stamp = now.toLocaleString('es-CO');
+        const stamp = now.toLocaleString('es-VE');
         updatedAt.textContent = stamp;
         footerGenerated.textContent = stamp;
 

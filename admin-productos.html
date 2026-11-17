@@ -586,7 +586,7 @@
     let editingId = null;
 
     function money(value) {
-      return new Intl.NumberFormat('es-CO', { style: 'currency', currency: 'COP', minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
+      return '$' + new Intl.NumberFormat('es-VE', { minimumFractionDigits: 0, maximumFractionDigits: 2 }).format(Number(value) || 0);
     }
 
     function esc(value) {
